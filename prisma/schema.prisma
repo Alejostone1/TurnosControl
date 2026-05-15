@@ -1,0 +1,854 @@
+// ============================================================
+// ESQUEMA PRISMA - SISTEMA DE NÓMINA Y CONTROL DE TURNOS
+// Colombia | Código Sustantivo del Trabajo
+// ============================================================
+
+generator cliente {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource bd {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext]
+}
+
+// ============================================================
+// MÓDULO 1: AUTENTICACIÓN Y MULTI-TENENCIA
+// ============================================================
+
+/// Representa una empresa u organización dentro del sistema (multi-tenant)
+model Empresa {
+  id          String        @id @default(cuid())
+  slug        String        @unique // Identificador único en URL (ej: "empresa-carlos")
+  nombre      String        @unique
+  nit         String?       // NIT o identificación fiscal
+  correo      String?       @unique
+  telefono    String?
+  direccion   Json?         // { "ciudad": "Bogotá", "direccion": "Calle 123" }
+  estado      EstadoEmpresa @default(ACTIVA)
+
+  // Configuración por defecto de la empresa
+  configuracionPredeterminada Json? @default("{}")
+
+  // Auditoría
+  creadoEn    DateTime  @default(now())
+  actualizadoEn DateTime @updatedAt
+  eliminadoEn DateTime?
+
+  // Relaciones
+  usuarios              Usuario[]
+  auxiliares            Auxiliar[]
+  empleados             Empleado[]
+  periodosNomina        PeriodoNomina[]
+  configuracionesLegales ConfiguracionLegal[]
+  conceptosNomina       ConceptoNomina[]
+  sesiones              Sesion[]
+  sesionesAuxiliares    SesionAuxiliar[]
+  registrosAuditoria    RegistroAuditoria[]
+
+  @@index([slug])
+  @@index([estado])
+
+  @@map("empresas")
+}
+
+enum EstadoEmpresa {
+  ACTIVA
+  INACTIVA
+  SUSPENDIDA
+  ELIMINADA
+}
+
+/// Usuario con acceso al sistema
+model Usuario {
+  id         String    @id @default(cuid())
+  correo     String    @unique
+  contrasena String    // Hash con bcrypt
+  nombres    String
+  apellidos  String
+  documento  String?   @unique
+  telefono   String?
+  avatar     String?
+
+  // Multi-tenencia
+  empresaId  String
+  empresa    Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  rol        RolUsuario @default(VISUALIZADOR)
+
+  // Seguridad
+  estaActivo            Boolean   @default(true)
+  ultimoAccesoEn        DateTime?
+  contrasenaActualizadaEn DateTime?
+  tokenActualizacion    String?   // Hash
+
+  // Auditoría
+  creadoEn     DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  creadoPor    String?  // ID del usuario que lo creó
+
+  // Relaciones
+  sesiones            Sesion[]
+  registrosAuditoria  RegistroAuditoria[]
+  periodosCreados     PeriodoNomina[] @relation("CreadoPorUsuario")
+  periodosModificados PeriodoNomina[] @relation("ModificadoPorUsuario")
+  empleadosCreados     Empleado[]
+
+  @@index([empresaId, correo])
+  @@index([empresaId, estaActivo])
+
+  @@map("usuarios")
+}
+
+/// Auxiliar con acceso limitado al sistema
+model Auxiliar {
+  id         String    @id @default(cuid())
+  correo     String    @unique
+  contrasena String    // Hash con bcrypt
+  nombres    String
+  apellidos  String
+  documento  String?   @unique
+  telefono   String?
+  avatar     String?
+
+  // Multi-tenencia
+  empresaId  String
+  empresa    Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  // Seguridad
+  estaActivo            Boolean   @default(true)
+  ultimoAccesoEn        DateTime?
+  contrasenaActualizadaEn DateTime?
+  tokenActualizacion    String?   // Hash
+
+  // Auditoría
+  creadoEn     DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  creadoPor    String?  // ID del usuario que lo creó
+
+  // Relaciones
+  sesiones            SesionAuxiliar[]
+  empleadosCreados    Empleado[]
+  registrosAuditoria  RegistroAuditoria[]
+
+  @@unique([empresaId, correo])
+  @@unique([empresaId, documento])
+  @@index([empresaId, estaActivo])
+
+  @@map("auxiliares")
+}
+
+enum RolUsuario {
+  SUPER_ADMIN   // Acceso total al sistema
+  ADMINISTRADOR // Acceso total a la empresa
+  LIQUIDADOR    // Puede calcular y aprobar nómina
+  VISUALIZADOR  // Solo lectura
+}
+
+/// Sesión activa de un usuario
+model Sesion {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  usuarioId  String
+  empresaId  String
+  creadoEn   DateTime @default(now())
+  expiraEn   DateTime
+  activa     Boolean   @default(true)
+
+  // Relaciones
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
+  empresa     Empresa     @relation(fields: [empresaId], references: [id])
+  @@index([token])
+
+  @@map("sesiones")
+}
+
+/// Sesión activa de un auxiliar
+model SesionAuxiliar {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  auxiliarId  String
+  empresaId  String
+  creadoEn   DateTime @default(now())
+  expiraEn   DateTime
+  activa     Boolean   @default(true)
+
+  // Relaciones
+  auxiliar    Auxiliar    @relation(fields: [auxiliarId], references: [id])
+  empresa    Empresa     @relation(fields: [empresaId], references: [id])
+  @@index([token])
+
+  @@map("sesiones_auxiliares")
+}
+
+// ============================================================
+// MÓDULO 2: CONFIGURACIÓN LEGAL (PARÁMETROS CST COLOMBIA)
+// ============================================================
+
+/// Parámetros legales y porcentajes según el Código Sustantivo del Trabajo
+model ConfiguracionLegal {
+  id         String  @id @default(cuid())
+  empresaId  String
+  empresa    Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  nombre     String  @default("Configuración Predeterminada")
+  estaActiva Boolean @default(true)
+
+  // ===== JORNADA BASE =====
+  horasSemanalesMaximas  Float @default(44)   // Tope semanal (Art. 161 CST)
+  horasDiariasEstandar   Float @default(7.33) // 44 ÷ 6 días laborales
+
+  // ===== RECARGOS POR CONDICIÓN (Art. 168 CST) =====
+  porcentajeRecargoNocturno         Int @default(35)  // Recargo nocturno
+  porcentajeRecargoDomFestivo       Int @default(75)  // Dominical / festivo diurno
+  porcentajeRecargoNocturnoFestivo  Int @default(110) // Nocturno + festivo
+
+  // ===== HORAS EXTRAS (Art. 159 y 168 CST) =====
+  porcentajeExtraDiurna         Int @default(25)  // Extra diurna (lunes-sábado)
+  porcentajeExtraNocturna       Int @default(75)  // Extra nocturna
+  porcentajeExtraDiurnaFestiva  Int @default(100) // Extra diurna en festivo/domingo
+  porcentajeExtraNocturnaFestiva Int @default(150) // Extra nocturna en festivo/domingo
+
+  // ===== JORNADA NOCTURNA =====
+  horaInicioNocturno String @default("19:00") // Formato HH:MM 24h (Ley 2466 de 2025: 7pm)
+  horaFinNocturno    String @default("06:00") // Formato HH:MM 24h
+
+  // ===== CONFIGURACIÓN DE ALMUERZO =====
+  tipoAlmuerzo              TipoAlmuerzo @default(PREDEFINIDO)
+  duracionAlmuerzaMinutos   Int?         @default(30)  // Solo si PREDEFINIDO
+  horaInicioAlmuerzo        String?      @default("12:00") // Solo si PERSONALIZADO
+  horaFinAlmuerzo           String?                        // Solo si PERSONALIZADO
+
+  // ===== FÓRMULA VALOR HORA =====
+  formulaValorHora String @default("SALARIO_MENSUAL / 220") // puede ser Personalizable
+
+  // ===== TIPO DE CÁLCULO DE HORAS EXTRAS =====
+  tipoCalculoHorasExtras TipoCalculoHorasExtras @default(SEMANAL)
+
+  // ===== VIGENCIA =====
+  vigenciaDesde DateTime  @default(now())
+  vigenciaHasta DateTime? // null = configuración actual activa
+  creadoPor     String?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  // Relaciones
+  periodosNomina PeriodoNomina[]
+
+  @@unique([empresaId, estaActiva]) // Solo una configuración activa por empresa
+  @@index([empresaId, vigenciaDesde])
+
+  @@map("configuraciones_legales")
+}
+
+enum TipoAlmuerzo {
+  NINGUNO      // Sin descuento de almuerzo
+  PREDEFINIDO  // Duración fija en minutos
+  PERSONALIZADO // Horario exacto de inicio y fin
+}
+
+enum TipoCalculoHorasExtras {
+  SEMANAL  // Acumula toda la semana; extras al superar el tope semanal
+  DIARIO   // Extras al superar la jornada diaria estándar por día
+}
+
+// ============================================================
+// MÓDULO 3: CONCEPTOS DE NÓMINA (DINÁMICOS)
+// ============================================================
+
+/// Define los tipos de turno y eventos que puede tener un día laboral
+model ConceptoNomina {
+  id         String  @id @default(cuid())
+  empresaId  String
+  empresa    Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  // Identificación
+  codigo      String // 'D', 'N', '24T', 'C', 'I', 'V', 'M', 'SC', 'DF', 'PR'
+  nombre      String // 'Turno Día', 'Turno Noche', 'Incapacidad', etc.
+  descripcion String?
+
+  // Tipo base del concepto
+  categoria CategoriaConcepto @default(TURNO_LABORAL)
+
+  // Cálculo de horas
+  tipoCalculo   TipoCalculo @default(HORAS_TURNO)
+  tipoImpacto   TipoImpacto @default(SUMA_HORAS) // Impacto en el cómputo diario
+  horasFijas    Float?      // Para HORAS_FIJAS (ej: 7.33 para incapacidad)
+  formula       String?     // Para FORMULA personalizada
+
+  // Comportamiento en liquidación
+  afectaLiquidacion    Boolean @default(true)  // ¿Genera pago?
+  cuentaParaTope       Boolean @default(false) // ¿Suma al tope semanal de 44h?
+  afectaVacaciones     Boolean @default(false) // ¿Incluye en base vacaciones?
+  requiereJustificacion Boolean @default(false) // ¿Exige soporte adjunto?
+  generaCompenatorio   Boolean @default(false) // ¿Requiere día compensatorio? (domingos)
+
+  // Horario por defecto del turno (puede sobrescribirse por empleado)
+  horaInicioDefecto String? // HH:MM — ej: "07:00" para turno D
+  horaFinDefecto    String? // HH:MM — ej: "19:00" para turno D
+  cruzaMedianoche   Boolean @default(false) // ¿El turno termina al día siguiente?
+
+  // Visualización
+  color  String? // Código hexadecimal para la UI
+  icono  String? // Emoji o nombre de ícono
+  orden  Int     @default(0)
+
+  // Control
+  estaActivo  Boolean @default(true)
+  esDelSistema Boolean @default(false) // No eliminable (D, N, C, I, etc.)
+  creadoPor   String?
+  creadoEn    DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  asignacionesTurno   AsignacionTurno[] @relation("TurnoConcepto")
+  asignacionesNovedad AsignacionTurno[] @relation("NovedadConcepto")
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId, estaActivo])
+  @@index([empresaId, categoria])
+
+  @@map("conceptos_nomina")
+}
+
+enum CategoriaConcepto {
+  TURNO_LABORAL   // D, N, 24T, M — turnos que generan horas trabajadas
+  AUSENCIA_PAGA   // I (incapacidad), V (vacaciones), PNR (permiso remunerado)
+  AUSENCIA_NO_PAGA // SC (sin contrato), NJ (no justificado)
+  DESCANSO        // C (libre/compensatorio), DF (día libre festivo)
+  ESPECIAL        // PR (practicante), aprendiz, etc.
+}
+
+enum TipoCalculo {
+  HORAS_TURNO   // Calcula horas reales según entrada/salida
+  HORAS_FIJAS   // Horas fijas independientes del día (ej: incapacidad = 7.33h)
+  FORMULA       // Fórmula personalizada
+  SIN_PAGO      // No genera pago (ausencia injustificada)
+}
+
+enum TipoImpacto {
+  SUMA_HORAS  // El concepto suma horas al día (turno, incapacidad, permiso)
+  RESTA_HORAS // El concepto resta horas (ausencia no justificada)
+  NEUTRO      // No afecta el cómputo de horas (compensatorio, libre)
+}
+
+// ============================================================
+// MÓDULO 4: EMPLEADOS
+// ============================================================
+
+/// Empleado vinculado a una empresa
+model Empleado {
+  id        String  @id @default(cuid())
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  // Identificación
+  tipoDocumento TipoDocumento @default(CEDULA_CIUDADANIA)
+  numeroDocumento String
+  nombres     String
+  apellidos   String
+
+  // Datos organizacionales
+  centroCosto String?    // Código del centro de costo (ej: 40001, 40002)
+  programa    String?    // Programa al que pertenece
+  modalidad   String?    // Modalidad de trabajo
+  cargo       String?    // Cargo o puesto del empleado
+  
+  // Quién creó este empleado (Administrador o Auxiliar)
+  creadoPorAuxiliarId String?
+  creadoPorUsuarioId   String?
+  auxiliarCreador      Auxiliar? @relation(fields: [creadoPorAuxiliarId], references: [id])
+  usuarioCreador       Usuario?  @relation(fields: [creadoPorUsuarioId], references: [id])
+
+  // Datos laborales
+  fechaIngreso     DateTime
+  fechaRetiro      DateTime?
+  tipoVinculacion  TipoVinculacion @default(TIEMPO_COMPLETO)
+  salarioBase      Float           // Salario mensual en COP
+  tieneAuxilioTransporte Boolean   @default(true)
+
+  // Contrato
+  tipoContrato   TipoContrato @default(TERMINO_INDEFINIDO)
+  horasSemanales Float        @default(44)
+
+  
+  // Control
+  estaActivo    Boolean  @default(true)
+  creadoPor     String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  asignacionesTurno    AsignacionTurno[]
+  registrosDias        RegistroDiaTrabajado[]
+  resultadosNomina     ResultadoNomina[]
+  configuracionPersonal ConfiguracionEmpleado?
+  periodosAsignados    EmpleadoPeriodo[]
+
+  @@unique([empresaId, numeroDocumento])
+  @@index([empresaId, estaActivo])
+  @@index([numeroDocumento])
+
+  @@map("empleados")
+}
+
+/// Asignación de empleados a períodos de nómina específicos
+model EmpleadoPeriodo {
+  id         String   @id @default(cuid())
+  empleadoId String
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  periodoId  String
+  periodo    PeriodoNomina @relation(fields: [periodoId], references: [id], onDelete: Cascade)
+  
+  // Estado de la asignación
+  estadoAsignacion EstadoAsignacion @default(ACTIVO)
+  
+  // Auditoría
+  creadoEn    DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  creadoPor   String?
+  
+  @@unique([empleadoId, periodoId])
+  @@index([periodoId, estadoAsignacion])
+  @@index([empleadoId, estadoAsignacion])
+  
+  @@map("empleado_periodo")
+}
+
+enum EstadoAsignacion {
+  ACTIVO     // Empleado activo en este período
+  INACTIVO   // Empleado inactivo en este período
+  EXCLUIDO   // Excluido explícitamente de este período
+}
+
+enum TipoDocumento {
+  CEDULA_CIUDADANIA
+  TARJETA_IDENTIDAD
+  CEDULA_EXTRANJERIA
+  PASAPORTE
+  NIT
+}
+
+enum TipoVinculacion {
+  TIEMPO_COMPLETO // 44h semanales
+  MEDIO_TIEMPO    // 22h semanales
+  TEMPORAL        // Obra o labor
+  APRENDIZ_SENA   // Aprendiz SENA
+  PRACTICANTE     // Practicante universitario
+}
+
+enum TipoContrato {
+  TERMINO_INDEFINIDO
+  TERMINO_FIJO
+  OBRA_LABOR
+  PRESTACION_SERVICIOS
+  APRENDIZAJE
+}
+
+
+
+// ============================================================
+// MÓDULO 5: PROGRAMACIÓN DE TURNOS
+// ============================================================
+
+/// Asignación de un concepto/turno a un empleado en una fecha específica
+model AsignacionTurno {
+  id        String   @id @default(cuid())
+  empresaId String
+  empleadoId String
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+
+  // Turno principal (D, N, 24T, M — categoría TURNO_LABORAL)
+  // También puede contener una novedad si no hay turno (puro día de novedad)
+  conceptoId String
+  concepto   ConceptoNomina  @relation("TurnoConcepto", fields: [conceptoId], references: [id])
+
+  // Novedad secundaria (I, A, PR, C, DF — opcional, se suma/resta sobre el turno)
+  novedadId  String?
+  novedad    ConceptoNomina? @relation("NovedadConcepto", fields: [novedadId], references: [id])
+
+  // Fecha del turno
+  fechaTurno DateTime @bd.Date
+
+  // Horarios personalizados (sobrescriben los del concepto)
+  // Usados principalmente para turno Manual (M)
+  horaInicioPersonalizada String? // HH:MM
+  horaFinPersonalizada    String? // HH:MM
+
+  // Descuento de alimentación individual (null = heredar del período; 0 = sin descuento; >0 = minutos)
+  minutosAlimentacion Int?
+
+  // Metadatos
+  observaciones String?
+  creadoPor     String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  registroDia RegistroDiaTrabajado?
+
+  @@unique([empresaId, empleadoId, fechaTurno]) // Un turno por día por empleado
+  @@index([empresaId, empleadoId, fechaTurno])
+  @@index([empresaId, fechaTurno])
+  @@index([conceptoId])
+  @@index([novedadId])
+
+  @@map("asignaciones_turno")
+}
+
+// ============================================================
+// MÓDULO 6: PERIODOS DE LIQUIDACIÓN
+// ============================================================
+
+/// Período de nómina (quincenal, mensual, etc.)
+model PeriodoNomina {
+  id        String  @id @default(cuid())
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  // Identificación
+  nombrePeriodo          String     // 'Enero 2025', 'Quincena 1 - Marzo 2025'
+  tipoPeriodo            TipoPeriodo @default(MENSUAL)
+  tipoCalculoHorasExtras TipoCalculoHorasExtras @default(SEMANAL)
+
+  // Fechas
+  fechaInicio DateTime @bd.Date
+  fechaFin    DateTime @bd.Date
+  fechaCorte  DateTime? @bd.Date // Día de corte para liquidación
+
+  // Configuración legal usada en este período
+  configuracionLegalId String
+  configuracionLegal   ConfiguracionLegal @relation(fields: [configuracionLegalId], references: [id])
+
+  // Descuento de alimentación global del período (null = usar config legal; 0 = sin descuento; >0 = minutos)
+  minutosAlimentacion Int?
+
+  // Estado del período
+  estadoPeriodo EstadoPeriodo @default(BORRADOR)
+  cerradoEn     DateTime?     // Fecha en que se cerró/bloqueó
+
+  // Cálculo
+  calculadoEn   DateTime?
+  calculadoPor  String?
+
+  // Auditoría
+  creadoPor     String?
+  creador       Usuario? @relation("CreadoPorUsuario", fields: [creadoPor], references: [id])
+  modificadoPor String?
+  modificador   Usuario? @relation("ModificadoPorUsuario", fields: [modificadoPor], references: [id])
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  registrosDias    RegistroDiaTrabajado[]
+  resultadosNomina ResultadoNomina[]
+  empleadosAsignados EmpleadoPeriodo[]
+
+  @@unique([empresaId, nombrePeriodo, fechaInicio])
+  @@index([empresaId, estadoPeriodo])
+  @@index([empresaId, fechaInicio, fechaFin])
+
+  @@map("periodos_nomina")
+}
+
+enum TipoPeriodo {
+  SEMANAL
+  QUINCENAL
+  MENSUAL
+  TRIMESTRAL
+  PERSONALIZADO
+}
+
+enum EstadoPeriodo {
+  BORRADOR    // Editable, en construcción
+  PENDIENTE   // Pendiente de revisión/aprobación
+  CALCULADO   // Calculado, listo para revisión
+  APROBADO    // Aprobado por RRHH
+  CERRADO     // Bloqueado, no editable
+  ARCHIVADO   // Archivado para historial
+}
+
+// ============================================================
+// MÓDULO 7: REGISTRO DETALLADO POR DÍA (RESULTADO DEL CÁLCULO)
+// ============================================================
+
+/// Resultado calculado de un día laboral dentro de un período
+model RegistroDiaTrabajado {
+  id          String       @id @default(cuid())
+  empresaId   String
+  empleadoId  String
+  empleado    Empleado     @relation(fields: [empleadoId], references: [id])
+  periodoId   String
+  periodo     PeriodoNomina @relation(fields: [periodoId], references: [id])
+  asignacionId String      @unique
+  asignacion  AsignacionTurno @relation(fields: [asignacionId], references: [id])
+
+  // Fecha y contexto del día
+  fechaDia       DateTime @bd.Date
+  numeroSemana   Int      // Semana ISO del año (para agrupación y tope semanal)
+  esFestivo      Boolean  @default(false) // Festivo legal o domingo
+  esDomingo      Boolean  @default(false) // Distingue domingos de otros festivos
+  cruzaMedianoche Boolean @default(false) // Turno que termina al día siguiente
+
+  // ===== HORAS CON RECARGO (dentro del tope semanal) =====
+  horasOrdinarias       Float @default(0) // Horas ordinarias diurnas
+  horasNocturnas        Float @default(0) // Con recargo nocturno (35%)
+  horasFestivas         Float @default(0) // Con recargo festivo/dominical (75%)
+  horasNoctFestivas     Float @default(0) // Nocturnas en festivo (110%)
+
+  // ===== HORAS EXTRAS (fuera del tope semanal de 44h) =====
+  horasExtraDiurna      Float @default(0) // Extra diurna (25%)
+  horasExtraNocturna    Float @default(0) // Extra nocturna (75%)
+  horasExtraDiurnaFest  Float @default(0) // Extra diurna festiva (100%)
+  horasExtraNoctFest    Float @default(0) // Extra nocturna festiva (150%)
+
+  // ===== TOTALES DEL DÍA =====
+  totalHorasTrabajadas  Float @default(0) // Suma de todas las horas del día
+  horasExtrasGeneradas  Float @default(0) // Horas que excedieron el tope
+  horasDeuda            Float @default(0) // Horas faltantes (si aplica)
+  horasSemanaAcumuladas Float @default(0) // Acumulado semanal hasta este día (para tope)
+
+  // ===== COMPENSATORIO =====
+  requiereCompensatorio Boolean @default(false) // Domingo trabajado sin compensatorio
+  compensatorioAsignado Boolean @default(false) // ¿Ya tiene día compensatorio asignado?
+
+  // ===== VALORIZACIÓN =====
+  valorHoraUsado Float? // Valor de la hora en COP al momento del cálculo
+  valorTotalDia  Float? // Valor total del día calculado (COP)
+
+  // Depuración y auditoría del cálculo
+  detalleCalculo Json?    // Log minuto a minuto para auditoría
+  calculadoEn    DateTime @default(now())
+  calculadoPor   String?  // ID de usuario o 'sistema'
+  version        Int      @default(1) // Versión del cálculo (para recálculos)
+
+  @@index([empresaId, empleadoId, periodoId])
+  @@index([empresaId, fechaDia])
+  @@index([empleadoId, fechaDia])
+  @@index([empleadoId, numeroSemana]) // Para consultas de tope semanal
+
+  @@map("registros_dias_trabajados")
+}
+
+// ============================================================
+// MÓDULO 8: RESULTADOS CONSOLIDADOS POR PERÍODO
+// ============================================================
+
+/// Totales acumulados de un empleado en un período de nómina
+model ResultadoNomina {
+  id         String       @id @default(cuid())
+  empresaId  String
+  empleadoId String
+  empleado   Empleado     @relation(fields: [empleadoId], references: [id])
+  periodoId  String
+  periodo    PeriodoNomina @relation(fields: [periodoId], references: [id])
+
+  // ===== RESUMEN DE HORAS DEL PERÍODO =====
+  // Horas con recargo
+  totalHorasOrdinarias    Float @default(0)
+  totalHorasNocturnas     Float @default(0)
+  totalHorasFestivas      Float @default(0)
+  totalHorasNoctFestivas  Float @default(0)
+
+  // Horas extras
+  totalExtraDiurna        Float @default(0)
+  totalExtraNocturna      Float @default(0)
+  totalExtraDiurnaFest    Float @default(0)
+  totalExtraNoctFest      Float @default(0)
+
+  // Totales
+  totalHorasTrabajadas    Float @default(0)
+  totalHorasExtras        Float @default(0)
+  totalHorasDeuda         Float @default(0) // Horas no trabajadas en el período
+
+  // ===== VALORES MONETARIOS (COP) =====
+  salarioBase             Float            // Salario base del período
+  auxilioTransporte       Float @default(0)
+  valorHorasOrdinarias    Float @default(0)
+  valorRecargoNocturno    Float @default(0)
+  valorRecargoFestivo     Float @default(0)
+  valorRecargoNoctFestivo Float @default(0)
+  valorExtraDiurna        Float @default(0)
+  valorExtraNocturna      Float @default(0)
+  valorExtraDiurnaFest    Float @default(0)
+  valorExtraNoctFest      Float @default(0)
+
+  // Totales monetarios
+  totalDevengado          Float @default(0) // Salario + recargos + extras
+  totalDeducciones        Float @default(0) // Salud, pensión, etc.
+  netoAPagar              Float @default(0) // Total devengado - deducciones
+
+  // Metadatos del cálculo
+  metadatosCalculo        Json?    // Snapshot de configuración usada
+  calculadoEn             DateTime @default(now())
+  calculadoPor            String?
+
+  // Auditoría
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([empresaId, empleadoId, periodoId])
+  @@index([empresaId, periodoId, empleadoId])
+
+  @@map("resultados_nomina")
+}
+
+// ============================================================
+// MÓDULO 9: CONFIGURACIÓN PERSONALIZADA POR EMPLEADO
+// ============================================================
+
+/// Configuración especial que sobrescribe los parámetros generales para un empleado
+model ConfiguracionEmpleado {
+  id         String   @id @default(cuid())
+  empleadoId String   @unique
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empresaId  String
+
+  // Horario personalizado (sobrescribe turnos D, N del concepto)
+  horarioPersonalizado Json? // { "turnoD": { "inicio": "06:00", "fin": "18:00" }, ... }
+
+  // Tasas especiales para este empleado (sobrescriben la config legal)
+  recargoNocturnoPersonalizado     Int?
+  recargoFestivoPersonalizado      Int?
+  recargoNoctFestivoPersonalizado  Int?
+
+  // Límites de horas extras
+  maxHorasExtrasSemana  Float? // Tope de horas extras por semana
+  maxHorasExtrasMes     Float? // Tope de horas extras por mes
+
+  // Prestaciones
+  tieneAuxilioTransporte Boolean @default(true)
+  tieneSeguroSalud       Boolean @default(true)
+  tieneFondoPension      Boolean @default(true)
+  esSindicado            Boolean @default(false)
+
+  // Autorizaciones
+  autorizadoHorasExtras  Boolean @default(false)
+  autorizadoTurnoNocturno Boolean @default(false)
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("configuraciones_empleados")
+}
+
+// ============================================================
+// MÓDULO 10: AUDITORÍA Y SEGURIDAD
+// ============================================================
+
+enum SeveridadAuditoria {
+  INFO
+  BAJO
+  MEDIO
+  ALTO
+  CRITICO
+}
+
+/// Registro de todas las acciones realizadas en el sistema
+model RegistroAuditoria {
+  id        String  @id @default(cuid())
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  usuarioId  String?
+  usuario    Usuario?  @relation(fields: [usuarioId], references: [id])
+  auxiliarId String?
+  auxiliar   Auxiliar? @relation(fields: [auxiliarId], references: [id])
+
+  // Acción registrada
+  accion     AccionAuditoria
+  entidad    String  // 'Empleado', 'Auxiliar', 'PeriodoNomina', etc.
+  entidadId  String
+  valorAntes   Json?
+  valorDespues Json?
+
+  // Contexto
+  ipAddress   String?
+  userAgent   String?
+  descripcion String?
+
+  modulo           String?            // EMPLEADOS, NOMINA, TURNOS, SEGURIDAD, CONFIGURACION, SISTEMA
+  severidad        SeveridadAuditoria @default(INFO)
+  accionDetallada  String?            // Human-readable detail: "Cambio de salario base"
+  esMasiva         Boolean            @default(false)
+  esAutomatico     Boolean            @default(false)
+  requiereRevision Boolean            @default(false)
+
+  creadoEn DateTime @default(now())
+
+  @@index([empresaId, entidad, entidadId])
+  @@index([empresaId, creadoEn])
+  @@index([usuarioId])
+  @@index([auxiliarId])
+  @@index([empresaId, severidad, creadoEn])
+  @@index([empresaId, modulo, creadoEn])
+  @@index([empresaId, accion, creadoEn])
+
+  @@map("registros_auditoria")
+}
+
+enum AccionAuditoria {
+  CREAR
+  LEER
+  ACTUALIZAR
+  ELIMINAR
+  CALCULAR
+  APROBAR
+  CERRAR
+  EXPORTAR
+  INICIAR_SESION
+  CERRAR_SESION
+  RECALCULAR
+  CONFIRMAR
+  ASIGNAR
+  DESASIGNAR
+  ACTIVAR
+  DESACTIVAR
+  IMPORTAR
+  CONFIGURAR
+  LOGIN_FALLIDO
+  RESTAURAR
+}
+
+// ============================================================
+// MÓDULO 11: PROCESAMIENTO ASÍNCRONO DE CÁLCULOS
+// ============================================================
+
+/// Trabajos en cola para cálculos pesados o notificaciones
+model TrabajoCalculo {
+  id        String @id @default(cuid())
+  empresaId String
+  periodoId String
+
+  tipoTrabajo   TipoTrabajo   @default(CALCULO_PERIODO)
+  estadoTrabajo EstadoTrabajo @default(PENDIENTE)
+
+  prioridad    Int @default(0) // 0 = normal, 1 = alta, 2 = urgente
+  intentos     Int @default(0) // Intentos realizados
+  maxIntentos  Int @default(3)
+
+  resultado   Json?     // Almacena resultado exitoso o detalle del error
+
+  iniciadoEn    DateTime?
+  finalizadoEn  DateTime?
+  creadoEn      DateTime @default(now())
+
+  @@index([empresaId, estadoTrabajo])
+  @@index([estadoTrabajo, prioridad])
+
+  @@map("trabajos_calculo")
+}
+
+enum TipoTrabajo {
+  CALCULO_PERIODO      // Cálculo completo de un período de nómina
+  GENERAR_REPORTE      // Generación de informe Excel/PDF
+  ACTUALIZACION_MASIVA // Modificación masiva de asignaciones
+  NOTIFICACION_CORREO  // Envío de liquidaciones por correo
+}
+
+enum EstadoTrabajo {
+  PENDIENTE
+  PROCESANDO
+  COMPLETADO
+  FALLIDO
+  CANCELADO
+}
