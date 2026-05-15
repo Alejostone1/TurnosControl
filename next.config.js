@@ -1,14 +1,21 @@
 const path = require('path')
 
+// Orígenes permitidos para Server Actions (localhost + dominio de Vercel)
+const vercelOrigins = [
+  process.env.VERCEL_URL,                 // ej: tu-app-xxxx.vercel.app
+  process.env.VERCEL_PROJECT_PRODUCTION_URL, // ej: tu-app.vercel.app
+  process.env.NEXTAUTH_URL?.replace(/^https?:\/\//, ''),
+].filter(Boolean)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      allowedOrigins: ["localhost:3000", ...vercelOrigins],
     },
   },
   images: {
-    domains: ["localhost"],
+    domains: ["localhost", "vercel.app"],
   },
   webpack(config, { nextRuntime, webpack }) {
     if (nextRuntime === 'edge') {
