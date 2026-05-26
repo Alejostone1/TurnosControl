@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getToken } from "next-auth/jwt"
+import { getAuthToken } from "@/lib/getAuthToken"
 import { registrarAuditoria } from "@/lib/auditoria"
 
 export const dynamic = 'force-dynamic'
 
 export async function PUT(request: NextRequest) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getAuthToken(request)
     if (!token) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
     const empresaId = (token as any)?.empresaId

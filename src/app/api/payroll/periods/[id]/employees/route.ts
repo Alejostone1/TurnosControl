@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getToken } from "next-auth/jwt"
+import { getAuthToken } from "@/lib/getAuthToken"
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getAuthToken(request)
     if (!token) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     const empresaId = (token as any)?.empresaId
     if (!empresaId) return NextResponse.json({ error: "Empresa no encontrada" }, { status: 400 })
@@ -139,7 +139,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getAuthToken(request)
     if (!token) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     const empresaId = (token as any)?.empresaId
     const userId = (token as any)?.id

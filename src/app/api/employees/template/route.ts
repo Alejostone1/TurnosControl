@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { getAuthToken } from "@/lib/getAuthToken"
 import * as XLSX from "xlsx"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  const token = await getAuthToken(request)
   if (!token) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const wb = XLSX.utils.book_new()

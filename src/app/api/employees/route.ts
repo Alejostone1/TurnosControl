@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getToken } from "next-auth/jwt"
+import { getAuthToken } from "@/lib/getAuthToken"
 import { registrarAuditoria } from "@/lib/auditoria"
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const session = await getAuthToken(request)
     
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const session = await getAuthToken(request)
     
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })

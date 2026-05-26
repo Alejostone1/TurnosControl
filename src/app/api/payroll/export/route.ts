@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getToken } from "next-auth/jwt"
+import { getAuthToken } from "@/lib/getAuthToken"
 import ExcelJS from "exceljs"
 
 export const dynamic = "force-dynamic"
@@ -507,7 +507,7 @@ function buildWeeklySheets(wb: ExcelJS.Workbook, periodo: any, asignaciones: any
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getAuthToken(request)
     if (!token) return NextResponse.json({ error:"No autorizado" }, { status:401 })
 
     const empresaId = (token as any)?.empresaId

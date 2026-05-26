@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { getAuthToken } from "@/lib/getAuthToken"
 import { prisma } from "@/lib/prisma"
 import { empleadoSchema } from "@/lib/schemas/empleado"
 import type { Prisma } from "@prisma/client"
@@ -18,7 +18,7 @@ const bulkSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getAuthToken(request)
     if (!token) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
     const empresaId = (token as any)?.empresaId as string

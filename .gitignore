@@ -41,3 +41,7 @@ prisma/*.db
 
 # embedded repos / scratch dirs
 TurnosControl/
+
+# deploy script con tokens (borrar despues de usar)
+deploy.mjs
+seed-neon.mjs
