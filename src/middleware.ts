@@ -1,12 +1,32 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { decode } from "next-auth/jwt"
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET || "tu-secreto-aqui-cambiar-en-produccion",
-  })
+  // Auth.js v5 changed the cookie name from "next-auth.session-token" to "authjs.session-token"
+  // getToken() from next-auth/jwt still looks for the old name, so we decode manually.
+  const secureCookie = req.nextUrl.protocol === "https:"
+  const cookieName = secureCookie
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token"
+  const cookieValue = req.cookies.get(cookieName)?.value
+
+  let token: any = null
+  if (cookieValue) {
+    try {
+      token = await decode({
+        token: cookieValue,
+        secret:
+          process.env.AUTH_SECRET ||
+          process.env.NEXTAUTH_SECRET ||
+          "tu-secreto-aqui-cambiar-en-produccion",
+        salt: cookieName,
+      })
+    } catch {
+      token = null
+    }
+  }
+
   const path = req.nextUrl.pathname
   const isAuxiliar = token?.userType === "auxiliar"
 

@@ -58,7 +58,7 @@ export default function LoginPage() {
         }
         sessionStorage.setItem("turnos_session_active", "1")
         toast.success("Inicio de sesión exitoso")
-        router.push("/dashboard")
+        window.location.href = "/dashboard"
       }
     } catch (error) {
       toast.error("Error al iniciar sesión")

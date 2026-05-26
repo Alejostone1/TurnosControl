@@ -57,7 +57,7 @@ export default function LoginAuxiliarPage() {
 
       sessionStorage.setItem("turnos_session_active", "1")
       toast.success("Bienvenido/a, Auxiliar")
-      router.push("/dashboard-auxiliar")
+      window.location.href = "/dashboard-auxiliar"
     } catch {
       toast.error("Error al iniciar sesión")
     } finally {
