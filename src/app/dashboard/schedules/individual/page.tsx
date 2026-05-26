@@ -180,16 +180,17 @@ function calculateHourClassification(
   let startMin = sh * 60 + sm
   let endMin = eh * 60 + em
   if (endMin <= startMin) endMin += 1440
-  // Shorten effective work window by meal break (taken off the end)
-  endMin = Math.max(startMin, endMin - breakMinutes)
+  // Descanso descontado desde el INICIO del turno (Ley 2466/2025)
+  startMin = startMin + breakMinutes
 
   let ordinarias = 0, nocturnas = 0, festivas = 0, nocturnasFestivas = 0
   let extraDiurna = 0, extraNocturna = 0, extraFestiva = 0, extraNocturnaFestiva = 0
   let weekRunning = weekTotalSoFar
 
   for (let m = startMin; m < endMin; m += 60) {
-    const hour = (m % 1440) / 60
-    const isNight = hour >= 21 || hour < 6  // Colombian law: 9pm–6am
+    const minOfDay = m % 1440
+    // Nocturno 19:00–06:00 (Ley 2466/2025, vigente desde dic. 25/2025)
+    const isNight = minOfDay >= 19 * 60 || minOfDay < 6 * 60
     const isExtra = weekRunning >= topeHoras
     weekRunning++
 

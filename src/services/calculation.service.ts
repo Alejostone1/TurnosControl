@@ -246,15 +246,19 @@ export class CalculationService {
     horasMaximas: number,      // tope semanal (44) o diario (7.33)
     cfg: ConfiguracionLegal,
     festivosColombia: Set<string>,
-    fecha: Date
+    fecha: Date,
+    breakMin = 0               // minutos de descanso a saltar desde el INICIO del turno
   ): void {
     let ini = this.horaAMinutos(inicioStr)
     let fin = this.horaAMinutos(finStr)
     if (fin <= ini) fin += 24 * 60
 
+    // El descanso se descuenta desde el INICIO del turno
+    const loopStart = ini + breakMin
+
     let capacidadRestante = Math.max(0, (horasMaximas - horasAcumuladas) * 60)  // en minutos
 
-    for (let minuto = ini; minuto < fin; minuto++) {
+    for (let minuto = loopStart; minuto < fin; minuto++) {
       const horaActual = minuto % (24 * 60)
 
       // Determinar si este minuto cae en día siguiente (para turnos que cruzan medianoche)
@@ -283,8 +287,7 @@ export class CalculationService {
       }
     }
 
-    const horasTotales = (fin - ini) / 60
-    resultado.totalHorasTrabajadas = horasTotales
+    resultado.totalHorasTrabajadas = Math.max(0, fin - loopStart) / 60
   }
 
   // ── Semana ────────────────────────────────────────────────────────────────
@@ -300,7 +303,8 @@ export class CalculationService {
     configLegal: ConfiguracionLegal,
     conceptosMap: Map<string, ConceptoNomina>,
     festivosColombia: Set<string>,
-    periodoId: string           // ← fix: recibimos el periodoId del contexto externo
+    periodoId: string,
+    periodoBreakMin: number | null  // PeriodoNomina.minutosAlimentacion (null = usar config legal)
   ): Promise<any> {
     const resultado = {
       horasOrdinarias:  0,
@@ -339,6 +343,15 @@ export class CalculationService {
       const esTurno24T = concepto.codigo === "24T"
       const valorHora  = this.calcularValorHora(empleado.salarioBase, configLegal.formulaValorHora)
 
+      // Cadena de prioridad para descanso: Asignación > Período > ConfigLegal
+      const breakMin: number = esTurno24T
+        ? 0
+        : (asignacion.minutosAlimentacion != null
+            ? asignacion.minutosAlimentacion
+            : periodoBreakMin != null
+              ? periodoBreakMin
+              : configLegal.duracionAlmuerzaMinutos ?? 0)
+
       const resultadoDia: ResultadoDia = {
         horasOrdinarias: 0, horasNocturnas: 0, horasFestivas: 0, horasNoctFestivas: 0,
         extrasOrdinarias: 0, extrasNocturnas: 0, extrasDiurnaFest: 0, extrasNoctFest: 0,
@@ -353,10 +366,8 @@ export class CalculationService {
         ? [0, configLegal.horasDiariasEstandar]   // tope diario (7.33h)
         : [horasAcumSemana, topeSemanal]           // tope semanal (44h)
 
-      // Calcular horas netas (con descuento de almuerzo si aplica)
-      const horasTurno = this.calcularHorasTurno(inicioStr, finStr, configLegal, esTurno24T)
-
       // Distribuir minuto a minuto según nocturnidad y tope disponible
+      // (breakMin salta los primeros N minutos desde el INICIO del turno)
       this.distribuirMinutoAMinuto(
         resultadoDia,
         inicioStr, finStr,
@@ -364,7 +375,8 @@ export class CalculationService {
         horasAcum, horasMax,
         configLegal,
         festivosColombia,
-        fecha
+        fecha,
+        breakMin
       )
 
       // Compensatorio: domingo trabajado (no festivo legal)
@@ -467,7 +479,8 @@ export class CalculationService {
         configLegal,
         conceptosMap,
         festivosColombia,
-        periodo.id   // ← pasar periodoId correctamente
+        periodo.id,
+        periodo.minutosAlimentacion ?? null
       )
 
       totOrd   += resultadoSemana.horasOrdinarias
