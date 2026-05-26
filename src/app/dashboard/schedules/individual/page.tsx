@@ -328,6 +328,8 @@ function SchedulesPageInner() {
 
   // Meal break state (period-level default + per-shift picker override)
   const [periodBreakMinutes, setPeriodBreakMinutes] = useState<number>(0)
+  const [globalBreakMode, setGlobalBreakMode] = useState<number>(0)   // 0/30/60/-1(custom)
+  const [globalBreakCustom, setGlobalBreakCustom] = useState<number>(30)
   const [pickerBreakMin, setPickerBreakMin] = useState<number>(0)    // 0/30/60/-1(custom)
   const [pickerBreakCustom, setPickerBreakCustom] = useState<number>(30)
 
@@ -339,12 +341,23 @@ function SchedulesPageInner() {
   const [manualStart, setManualStart] = useState("07:00")
   const [manualEnd, setManualEnd] = useState("19:00")
 
-  // Load period-level meal break from URL periodoId or from first overlapping period
+  // Load period-level meal break from URL periodoId
   useEffect(() => {
     if (periodoId) {
       fetch(`/api/payroll/periods/${periodoId}`)
         .then(r => r.ok ? r.json() : null)
-        .then((p: any) => { if (p?.minutosAlimentacion != null) setPeriodBreakMinutes(p.minutosAlimentacion) })
+        .then((p: any) => {
+          if (p?.minutosAlimentacion != null) {
+            const v = p.minutosAlimentacion as number
+            setPeriodBreakMinutes(v)
+            if (v === 0 || v === 30 || v === 60) {
+              setGlobalBreakMode(v)
+            } else {
+              setGlobalBreakMode(-1)
+              setGlobalBreakCustom(v)
+            }
+          }
+        })
         .catch(() => {})
     }
   }, [periodoId])
@@ -937,6 +950,65 @@ function SchedulesPageInner() {
                 <Label className="text-xs">Hasta</Label>
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-9" />
               </div>
+            </div>
+
+            {/* ── Descuento de Alimentación Global ── */}
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-orange-200 bg-orange-50/70 px-3 py-2.5">
+              <UtensilsCrossed className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+              <span className="text-xs font-semibold text-orange-800 mr-1">Desc. Alimentación</span>
+              {([0, 30, 60] as const).map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => {
+                    setGlobalBreakMode(v)
+                    setPeriodBreakMinutes(v)
+                  }}
+                  className={[
+                    "text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all",
+                    globalBreakMode === v
+                      ? "border-orange-500 bg-orange-100 text-orange-900 shadow-sm"
+                      : "border-border text-muted-foreground hover:border-orange-300 hover:text-orange-700 bg-white",
+                  ].join(" ")}
+                >
+                  {v === 0 ? "Sin descuento" : v === 30 ? "30 min" : "1 hora"}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setGlobalBreakMode(-1)
+                  setPeriodBreakMinutes(globalBreakCustom)
+                }}
+                className={[
+                  "text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all",
+                  globalBreakMode === -1
+                    ? "border-orange-500 bg-orange-100 text-orange-900 shadow-sm"
+                    : "border-border text-muted-foreground hover:border-orange-300 hover:text-orange-700 bg-white",
+                ].join(" ")}
+              >
+                Personalizado
+              </button>
+              {globalBreakMode === -1 && (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={120}
+                    value={globalBreakCustom}
+                    onChange={e => {
+                      const v = Math.max(0, parseInt(e.target.value) || 0)
+                      setGlobalBreakCustom(v)
+                      setPeriodBreakMinutes(v)
+                    }}
+                    className="h-7 w-16 text-xs border-orange-300"
+                  />
+                  <span className="text-[11px] text-orange-700">min</span>
+                </div>
+              )}
+              <span className="ml-auto text-[11px] text-orange-700/70 hidden sm:block">
+                Este valor se aplica a nuevos turnos. Puedes ajustarlo turno a turno al hacer clic en el día.
+              </span>
             </div>
           </div>
         </CardContent>
