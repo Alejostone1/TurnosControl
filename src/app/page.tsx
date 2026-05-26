@@ -38,7 +38,7 @@ const features = [
   {
     icon: Calculator,
     title: "Liquidación de Nómina",
-    desc: "Cálculo automático de recargos nocturnos 21:00–06:00 (35%), dominicales y festivos (75%), horas extra diurnas (25%) y extra nocturnas (75%) según el CST y Ley 2466/2025.",
+    desc: "Cálculo automático de recargo nocturno 7:00 p.m.–6:00 a.m. (+35%), dominicales y festivos (+80%/+90% según semestre), extra diurna (+25%) y extra nocturna (+75%) conforme a la Ley 2466/2025.",
     ref: "CST Art. 168–170 · Ley 2466/2025",
     color: "bg-purple-50 text-purple-600 border-purple-100",
   },
@@ -70,20 +70,20 @@ const normas = [
     icon: BookOpen,
     titulo: "Código Sustantivo del Trabajo",
     items: [
-      "Jornada máxima: 44 h/sem. — 42 h/sem. desde jul. 15/2026 (Ley 2101/2021)",
-      "Horario nocturno: 21:00–06:00 — recargo 35% (Ley 2466/2025, Art. 168)",
-      "Extra diurna: +25% · Extra nocturna: +75% sobre el valor hora ordinaria",
-      "Dominical/festivo ordinario: +75% · Extra diurna festiva: +100%",
+      "Jornada máxima: 44 h/sem. (42 h/sem. desde jul. 15/2026) — Ley 2101/2021",
+      "Nocturno: 7:00 p.m.–6:00 a.m., recargo +35% — Ley 2466/2025 (desde dic. 25/2025)",
+      "Extra diurna +25% · Extra nocturna +75% sobre el valor de la hora ordinaria",
+      "Dominical/festivo: +80% (ene–jun/2026) · +90% (jul–dic/2026) · +100% en 2027",
     ],
   },
   {
     icon: Scale,
-    titulo: "Decreto 1072 de 2015",
+    titulo: "Decreto 1072 de 2015 · Salario Mínimo 2026",
     items: [
-      "Reglamentación Única del Sector Trabajo (DUR)",
-      "Afiliaciones al Sistema de Seguridad Social Integral",
-      "Aportes: salud 12,5% · pensión 16% · ARL según riesgo",
-      "Parafiscales: SENA 2% · ICBF 3% · Caja de Compensación 4%",
+      "Salario mínimo: $1.750.905 · Auxilio de transporte: $249.095",
+      "Hora ordinaria: $7.959 (hasta jul. 14) · $8.338 desde jul. 15/2026",
+      "Aportes: salud 12,5% · pensión 16% · ARL según nivel de riesgo",
+      "Parafiscales: SENA 2% · ICBF 3% · Caja de Compensación Familiar 4%",
     ],
   },
   {
@@ -91,9 +91,9 @@ const normas = [
     titulo: "Prestaciones Sociales Obligatorias",
     items: [
       "Prima de servicios: 15 días de salario por semestre (Art. 306 CST)",
-      "Cesantías: 30 días de salario por año + intereses 12% anual",
+      "Cesantías: 30 días de salario por año + intereses del 12% anual (Art. 249)",
       "Vacaciones: 15 días hábiles por año trabajado (Art. 186 CST)",
-      "Auxilio de transporte según decreto de salario mínimo vigente",
+      "Auxilio de transporte: $249.095 mensuales (Decreto salario mínimo 2026)",
     ],
   },
 ]
@@ -264,13 +264,16 @@ export default function LandingPage() {
               <Clock className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <h3 className="text-xl font-bold mb-1">Ley 2101 de 2021 — Reducción Progresiva de Jornada</h3>
-              <p className="text-blue-100">
-                La Ley 2101 de 2021 estableció la reducción gradual de la jornada máxima ordinaria, pasando de 48 horas
-                hasta llegar a <strong className="text-white">44 horas semanales actualmente vigentes</strong>.
-                El <strong className="text-white">15 de julio de 2026</strong> el tope quedará fijado definitivamente
-                en <strong className="text-white">42 horas semanales</strong>. TurnosPro ajusta automáticamente
-                los umbrales según la fecha de cada período liquidado.
+              <h3 className="text-xl font-bold mb-1">Ley 2101/2021 · Ley 2466/2025 — Jornada y Recargos Vigentes</h3>
+              <p className="text-blue-100 mb-3">
+                La Ley 2101 de 2021 redujo la jornada máxima de 48 horas hasta{" "}
+                <strong className="text-white">44 horas semanales actualmente</strong>.
+                El <strong className="text-white">15 de julio de 2026</strong> baja a{" "}
+                <strong className="text-white">42 horas semanales</strong> — lo que eleva el valor de la hora ordinaria
+                de <strong className="text-white">$7.959</strong> a <strong className="text-white">$8.338</strong>.
+                La Ley 2466 de 2025 (vigente desde dic. 25/2025) extendió la jornada nocturna a partir de las{" "}
+                <strong className="text-white">7:00 p.m.</strong> y estableció el aumento progresivo del recargo dominical:
+                +80% (1er sem. 2026) → +90% (2do sem. 2026) → +100% desde 2027.
               </p>
             </div>
             <div className="text-center shrink-0 space-y-2">
