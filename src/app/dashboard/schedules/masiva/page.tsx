@@ -37,11 +37,13 @@ interface Concepto {
 interface AsignacionTurno {
   id: string; empleadoId: string; conceptoId: string; novedadId?: string | null
   fechaTurno: string; horaInicioPersonalizada?: string | null; horaFinPersonalizada?: string | null
+  minutosAlimentacion?: number | null
   concepto: Concepto; novedad?: Concepto | null
 }
 type PendingEntry = {
   conceptoId: string; novedadId?: string | null
   horaInicio?: string | null; horaFin?: string | null
+  minutosAlimentacion?: number | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ function fmtLong(dk: string): string {
 function fmtShort(iso: string): string {
   return new Date(iso).toLocaleDateString("es-CO",{ day:"numeric", month:"short", year:"numeric" })
 }
-function getConceptoHoras(c: Concepto, horaInicio?: string | null, horaFin?: string | null): number {
+function getConceptoHoras(c: Concepto, horaInicio?: string | null, horaFin?: string | null, breakMin = 0): number {
   if (c.horasFijas != null) return c.horasFijas
   const start = horaInicio || c.horaInicioDefecto
   const end   = horaFin   || c.horaFinDefecto
@@ -109,6 +111,7 @@ function getConceptoHoras(c: Concepto, horaInicio?: string | null, horaFin?: str
     const [eh, em] = end.split(":").map(Number)
     let mins = (eh * 60 + em) - (sh * 60 + sm)
     if (mins <= 0) mins += 24 * 60
+    mins = Math.max(0, mins - breakMin)
     return Math.round(mins / 6) / 10
   }
   return 8
@@ -594,6 +597,11 @@ export default function ProgramacionMasivaPage() {
   const [manualStart, setManualStart]     = useState("07:00")
   const [manualEnd, setManualEnd]         = useState("19:00")
 
+  // ── Meal break ──
+  const [masivBreakMode, setMasivBreakMode] = useState<number>(0)   // 0 | 30 | 60 | -1 (custom)
+  const [masivBreakCustom, setMasivBreakCustom] = useState<number>(30)
+  const masivBreakMin = masivBreakMode === -1 ? masivBreakCustom : masivBreakMode
+
   // ── Save ──
   const [saving, setSaving] = useState(false)
 
@@ -694,7 +702,8 @@ export default function ProgramacionMasivaPage() {
     for (const entry of Object.values(pendingMap)) {
       const c = conceptos.find(x => x.id === entry.conceptoId)
       if (!c) continue
-      const h = getConceptoHoras(c, entry.horaInicio, entry.horaFin)
+      const breakM = entry.minutosAlimentacion ?? masivBreakMin
+      const h = getConceptoHoras(c, entry.horaInicio, entry.horaFin, breakM)
       ord += Math.min(h, 8)
       ext += Math.max(0, h - 8)
     }
@@ -877,6 +886,7 @@ export default function ProgramacionMasivaPage() {
           novedadId:  pendingMap[fecha].novedadId  ?? null,
           horaInicioPersonalizada: pendingMap[fecha].horaInicio ?? null,
           horaFinPersonalizada:    pendingMap[fecha].horaFin    ?? null,
+          minutosAlimentacion: pendingMap[fecha].minutosAlimentacion ?? (masivBreakMin > 0 ? masivBreakMin : null),
         }))
       )
       const res = await fetch("/api/schedules/batch", {
@@ -1685,6 +1695,53 @@ export default function ProgramacionMasivaPage() {
                       <span className="w-3 h-3 rounded bg-gray-100 opacity-40 inline-block" />
                       Fuera del período
                     </span>
+                  </div>
+
+                  {/* ── Meal break selector ── */}
+                  <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-orange-700 flex items-center gap-1.5">
+                        🍽 Descuento de alimentación
+                      </p>
+                      {masivBreakMin > 0 && (
+                        <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 border border-orange-200 rounded-full px-2 py-0.5">
+                          −{masivBreakMin} min por turno
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { label: "Sin descuento", value: 0 },
+                        { label: "30 min",  value: 30 },
+                        { label: "1 hora",  value: 60 },
+                        { label: "Personalizado", value: -1 },
+                      ] as { label: string; value: number }[]).map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setMasivBreakMode(opt.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            masivBreakMode === opt.value
+                              ? "bg-orange-500 border-orange-500 text-white shadow-sm"
+                              : "bg-white border-orange-200 text-orange-700 hover:border-orange-400"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    {masivBreakMode === -1 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={masivBreakCustom}
+                          onChange={e => setMasivBreakCustom(Math.max(1, Math.min(120, Number(e.target.value))))}
+                          className="w-20 h-8 rounded-lg border border-orange-300 bg-white text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                        <span className="text-xs text-orange-700 font-medium">minutos</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Multi-selection alert */}

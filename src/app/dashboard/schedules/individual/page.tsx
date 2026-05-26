@@ -204,46 +204,53 @@ function calculateHourClassification(
   horaInicio: string,
   horaFin: string,
   festDay: boolean,
-  weekTotalSoFar: number,
-  topeHoras: number,
-  breakMinutes: number = 0
+  weekTotalSoFar: number,  // horas ya acumuladas esta semana
+  topeHoras: number,        // tope semanal (ej. 44h)
+  breakMinutes: number = 0  // minutos de descanso desde el INICIO
 ): HourClassification {
   const [sh, sm] = horaInicio.split(':').map(Number)
   const [eh, em] = horaFin.split(':').map(Number)
 
   let startMin = sh * 60 + sm
-  let endMin = eh * 60 + em
+  let endMin   = eh * 60 + em
   if (endMin <= startMin) endMin += 1440
-  // Descanso descontado desde el INICIO del turno (Ley 2466/2025)
-  startMin = startMin + breakMinutes
 
-  let ordinarias = 0, nocturnas = 0, festivas = 0, nocturnasFestivas = 0
-  let extraDiurna = 0, extraNocturna = 0, extraFestiva = 0, extraNocturnaFestiva = 0
-  let weekRunning = weekTotalSoFar
+  // Descanso desde el INICIO del turno (Ley 2466/2025)
+  const loopStart = startMin + breakMinutes
 
-  for (let m = startMin; m < endMin; m += 60) {
+  // Capacidad restante en MINUTOS (convierte desde horas)
+  let capacidadRestante = Math.max(0, (topeHoras - weekTotalSoFar) * 60)
+
+  // Contadores en minutos (se dividen por 60 al retornar)
+  let ordM = 0, nocM = 0, festM = 0, nfM = 0
+  let exDM = 0, exNM = 0, exDFM = 0, exNFM = 0
+
+  for (let m = loopStart; m < endMin; m++) {   // loop MINUTO A MINUTO
     const minOfDay = m % 1440
     // Nocturno 19:00–06:00 (Ley 2466/2025, vigente desde dic. 25/2025)
     const isNight = minOfDay >= 19 * 60 || minOfDay < 6 * 60
-    const isExtra = weekRunning >= topeHoras
-    weekRunning++
 
-    if (festDay) {
-      if (isNight) {
-        if (isExtra) { extraNocturnaFestiva++ } else { nocturnasFestivas++ }
-      } else {
-        if (isExtra) { extraFestiva++ } else { festivas++ }
-      }
+    if (capacidadRestante > 0) {
+      capacidadRestante--
+      if (festDay) { if (isNight) nfM++;   else festM++ }
+      else         { if (isNight) nocM++;  else ordM++  }
     } else {
-      if (isNight) {
-        if (isExtra) { extraNocturna++ } else { nocturnas++ }
-      } else {
-        if (isExtra) { extraDiurna++ } else { ordinarias++ }
-      }
+      if (festDay) { if (isNight) exNFM++; else exDFM++ }
+      else         { if (isNight) exNM++;  else exDM++  }
     }
   }
 
-  return { ordinarias, nocturnas, festivas, nocturnasFestivas, extraDiurna, extraNocturna, extraFestiva, extraNocturnaFestiva }
+  // Devolver en HORAS (÷60) para mantener compatibilidad con el resto del código
+  return {
+    ordinarias:         ordM  / 60,
+    nocturnas:          nocM  / 60,
+    festivas:           festM / 60,
+    nocturnasFestivas:  nfM   / 60,
+    extraDiurna:        exDM  / 60,
+    extraNocturna:      exNM  / 60,
+    extraFestiva:       exDFM / 60,
+    extraNocturnaFestiva: exNFM / 60,
+  }
 }
 
 function getDayClassification(
