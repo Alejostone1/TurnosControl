@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Save, X, Plus, User, Settings, Clock, BarChart2, ArrowLeft, CalendarRange, Search, Filter, Building2, Users, Lock, AlertTriangle, UtensilsCrossed } from "lucide-react"
+import { Save, X, Plus, User, Settings, Clock, BarChart2, ArrowLeft, ArrowRight, CalendarRange, Search, Filter, Building2, Users, Lock, AlertTriangle, UtensilsCrossed, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -84,6 +84,40 @@ function localDateKey(date: Date): string {
 function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number)
   return new Date(y, m - 1, d, 12, 0, 0)
+}
+
+function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${dd}`
+}
+
+function getDatePresets() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const mo = now.getMonth()
+  const dow = now.getDay() === 0 ? 7 : now.getDay()  // 1=Lun…7=Dom
+
+  const thisMon = new Date(now); thisMon.setDate(now.getDate() - dow + 1); thisMon.setHours(0,0,0,0)
+  const thisSun = new Date(thisMon); thisSun.setDate(thisMon.getDate() + 6)
+  const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7)
+  const nextSun = new Date(nextMon); nextSun.setDate(nextMon.getDate() + 6)
+  const q1s = new Date(y, mo, 1);  const q1e = new Date(y, mo, 15)
+  const q2s = new Date(y, mo, 16); const q2e = new Date(y, mo + 1, 0)
+  const ms  = new Date(y, mo, 1);  const me  = new Date(y, mo + 1, 0)
+
+  return [
+    { label: "Esta sem.",  start: toDateStr(thisMon), end: toDateStr(thisSun) },
+    { label: "Próx. sem.", start: toDateStr(nextMon), end: toDateStr(nextSun) },
+    { label: "1ª Quinc.", start: toDateStr(q1s),     end: toDateStr(q1e) },
+    { label: "2ª Quinc.", start: toDateStr(q2s),     end: toDateStr(q2e) },
+    { label: "Este mes",   start: toDateStr(ms),      end: toDateStr(me)  },
+  ]
+}
+
+function diffDays(start: string, end: string): number {
+  return Math.round((parseLocalDate(end).getTime() - parseLocalDate(start).getTime()) / 86400000) + 1
 }
 
 function getWeeksInRange(startStr: string, endStr: string): Date[][] {
@@ -921,35 +955,99 @@ function SchedulesPageInner() {
               </div>
             )}
 
-            {/* Selección de empleado y fechas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Empleado</Label>
-                <Select value={selectedEmpleadoId} onValueChange={setSelectedEmpleadoId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="— Selecciona —" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getFilteredEmpleados().map(e => (
-                      <SelectItem key={e.id} value={e.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{e.nombres} {e.apellidos}</span>
-                          {!e.estaActivo && <Badge variant="destructive" className="text-xs">Inactivo</Badge>}
-                        </div>
-                        <span className="text-muted-foreground ml-1.5 text-xs">· {e.numeroDocumento}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Selección de empleado */}
+            <div className="space-y-1">
+              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <User className="h-3 w-3" /> Empleado
+              </Label>
+              <Select value={selectedEmpleadoId} onValueChange={setSelectedEmpleadoId}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="— Selecciona —" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getFilteredEmpleados().map(e => (
+                    <SelectItem key={e.id} value={e.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{e.nombres} {e.apellidos}</span>
+                        {!e.estaActivo && <Badge variant="destructive" className="text-xs">Inactivo</Badge>}
+                      </div>
+                      <span className="text-muted-foreground ml-1.5 text-xs">· {e.numeroDocumento}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Período de fechas */}
+            <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-violet-50/40 p-3 space-y-2.5">
+              {/* Quick presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <CalendarRange className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide mr-1">Período rápido:</span>
+                {getDatePresets().map(p => {
+                  const active = startDate === p.start && endDate === p.end
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => { setStartDate(p.start); setEndDate(p.end) }}
+                      className={[
+                        "text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all",
+                        active
+                          ? "border-blue-500 bg-blue-500 text-white shadow-sm"
+                          : "border-blue-200 bg-white text-blue-700 hover:border-blue-400 hover:bg-blue-50",
+                      ].join(" ")}
+                    >
+                      {p.label}
+                    </button>
+                  )
+                })}
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Desde</Label>
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-9" />
+
+              {/* Date inputs */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Desde */}
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">📅 Desde</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="h-10 border-2 border-blue-200 focus-visible:ring-blue-300 bg-white font-semibold text-sm rounded-lg shadow-sm"
+                  />
+                  {startDate && (
+                    <p className="text-[10px] text-blue-600 font-medium capitalize leading-none pt-0.5">
+                      {parseLocalDate(startDate).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}
+                    </p>
+                  )}
+                </div>
+
+                {/* Hasta */}
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-violet-600 uppercase tracking-wide">📅 Hasta</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="h-10 border-2 border-violet-200 focus-visible:ring-violet-300 bg-white font-semibold text-sm rounded-lg shadow-sm"
+                  />
+                  {endDate && (
+                    <p className="text-[10px] text-violet-600 font-medium capitalize leading-none pt-0.5">
+                      {parseLocalDate(endDate).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Hasta</Label>
-                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-9" />
-              </div>
+
+              {/* Duration pill */}
+              {startDate && endDate && diffDays(startDate, endDate) > 0 && (
+                <div className="flex justify-center pt-0.5">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 text-white text-[11px] font-bold shadow-sm">
+                    <CalendarRange className="h-3 w-3" />
+                    {diffDays(startDate, endDate)} días · {startDate} → {endDate}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Descuento de Alimentación Global ── */}

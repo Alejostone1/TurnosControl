@@ -18,6 +18,7 @@ import {
   Calculator,
   BarChart2,
   Calendar,
+  CalendarRange,
   ChevronDown,
   ChevronUp,
   X,
@@ -26,7 +27,6 @@ import {
   CheckCircle2,
   AlertCircle,
   FileEdit,
-  CalendarRange,
   ArrowRight,
   Edit,
   Trash2,
@@ -917,25 +917,55 @@ export default function PayrollPeriodsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Fecha Inicio *</Label>
-                    <Input
-                      type="date"
-                      value={formData.fechaInicio}
-                      onChange={e => setFormData({ ...formData, fechaInicio: e.target.value })}
-                      required
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Fecha Fin *</Label>
-                    <Input
-                      type="date"
-                      value={formData.fechaFin}
-                      onChange={e => setFormData({ ...formData, fechaFin: e.target.value })}
-                      required
-                      className="h-9"
-                    />
+                  {/* ── Rango de fechas ── */}
+                  <div className="sm:col-span-2 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-violet-50/40 p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CalendarRange className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span className="text-xs font-bold text-blue-800 uppercase tracking-wide">Rango de Fechas del Período</span>
+                      {formData.fechaInicio && formData.fechaFin && (() => {
+                        const dias = Math.round(
+                          (new Date(formData.fechaFin).getTime() - new Date(formData.fechaInicio).getTime()) / 86400000
+                        ) + 1
+                        return dias > 0 ? (
+                          <span className="ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 text-white text-[11px] font-bold shadow-sm">
+                            <CalendarRange className="h-2.5 w-2.5" />
+                            {dias} días
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">📅 Fecha Inicio *</Label>
+                        <Input
+                          type="date"
+                          value={formData.fechaInicio}
+                          onChange={e => setFormData({ ...formData, fechaInicio: e.target.value })}
+                          required
+                          className="h-10 border-2 border-blue-200 focus-visible:ring-blue-300 bg-white font-semibold text-sm rounded-lg shadow-sm"
+                        />
+                        {formData.fechaInicio && (
+                          <p className="text-[10px] text-blue-600 font-medium capitalize leading-none pt-0.5">
+                            {new Date(formData.fechaInicio + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-violet-600 uppercase tracking-wide">📅 Fecha Fin *</Label>
+                        <Input
+                          type="date"
+                          value={formData.fechaFin}
+                          onChange={e => setFormData({ ...formData, fechaFin: e.target.value })}
+                          required
+                          className="h-10 border-2 border-violet-200 focus-visible:ring-violet-300 bg-white font-semibold text-sm rounded-lg shadow-sm"
+                        />
+                        {formData.fechaFin && (
+                          <p className="text-[10px] text-violet-600 font-medium capitalize leading-none pt-0.5">
+                            {new Date(formData.fechaFin + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
