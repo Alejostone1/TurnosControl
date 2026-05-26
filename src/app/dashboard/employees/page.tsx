@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Plus, Search, Edit, Trash2, Eye, Filter,
   Building2, Users, ChevronLeft, ChevronRight, LayoutList, LayoutGrid,
-  User,
+  User, FileDown, Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -178,9 +178,10 @@ function Pagination({ page, total, pageSize, onChange }: { page: number; total: 
 // ── Página principal ─────────────────────────────────────────────
 export default function EmployeesPage() {
   const [empleados, setEmpleados] = useState<Empleado[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [viewMode, setViewMode]   = useState<'grid' | 'list'>('grid')
-  const [page, setPage]           = useState(1)
+  const [loading, setLoading]         = useState(true)
+  const [exportLoading, setExportLoading] = useState(false)
+  const [viewMode, setViewMode]       = useState<'grid' | 'list'>('grid')
+  const [page, setPage]               = useState(1)
   const [searchTerm, setSearchTerm] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
@@ -199,6 +200,31 @@ export default function EmployeesPage() {
       toast.error('Error al cargar empleados')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      setExportLoading(true)
+      const params = new URLSearchParams()
+      if (filters.estado !== 'todos') params.set('estado', filters.estado === 'activos' ? 'activo' : 'inactivo')
+      if (filters.centroCosto  && filters.centroCosto  !== 'all') params.set('centroCosto',  filters.centroCosto)
+      if (filters.programa     && filters.programa     !== 'all') params.set('programa',     filters.programa)
+      if (filters.tipoContrato && filters.tipoContrato !== 'all') params.set('tipoContrato', filters.tipoContrato)
+      const res = await fetch(`/api/reports/empleados?${params.toString()}`)
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `Empleados_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`Exportando ${filtered.length} empleados`)
+    } catch {
+      toast.error('Error al exportar')
+    } finally {
+      setExportLoading(false)
     }
   }
 
@@ -254,7 +280,7 @@ export default function EmployeesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Empleados</h1>
           <p className="text-sm text-muted-foreground">Gestión del personal vinculado</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -268,6 +294,19 @@ export default function EmployeesPage() {
                 {activeFiltersCount}
               </Badge>
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={exportLoading || filtered.length === 0}
+            className="gap-1.5 text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+          >
+            {exportLoading
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <FileDown className="h-4 w-4" />
+            }
+            Exportar Excel
           </Button>
           <Link href="/dashboard/employees/new">
             <Button size="sm">

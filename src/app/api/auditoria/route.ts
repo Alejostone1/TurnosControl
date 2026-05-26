@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const busqueda    = searchParams.get("busqueda")    || undefined
     const desde       = searchParams.get("desde")       || undefined
     const hasta       = searchParams.get("hasta")       || undefined
+    const entidadId   = searchParams.get("entidadId")   || undefined
 
     const where: Record<string, unknown> = { empresaId }
     if (auxiliarId && auxiliarId !== 'all') where.auxiliarId = auxiliarId
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
     if (modulo     && modulo     !== 'all') where.modulo     = modulo
     if (severidad  && severidad  !== 'all') where.severidad  = severidad
     if (entidad    && entidad    !== 'all') where.entidad    = { contains: entidad, mode: 'insensitive' }
+    if (entidadId) where.entidadId = entidadId
     if (busqueda) {
       where.OR = [
         { descripcion:     { contains: busqueda, mode: 'insensitive' } },

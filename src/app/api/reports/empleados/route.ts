@@ -46,17 +46,25 @@ export async function GET(request: NextRequest) {
   const cc       = sp.get("centroCosto") ?? ""
   const prog     = sp.get("programa") ?? ""
   const mod      = sp.get("modalidad") ?? ""
+  const cont     = sp.get("tipoContrato") ?? ""
+  const idsParam = sp.get("ids") ?? ""
 
   const where: any = { empresaId }
   if (estado === "activo")   where.estaActivo = true
   if (estado === "inactivo") where.estaActivo = false
-  if (cc)   where.centroCosto = cc
-  if (prog) where.programa    = prog
-  if (mod)  where.modalidad   = mod
+  if (cc)   where.centroCosto  = cc
+  if (prog) where.programa     = prog
+  if (mod)  where.modalidad    = mod
+  if (cont) where.tipoContrato = cont
+  if (idsParam) where.id = { in: idsParam.split(",").filter(Boolean) }
 
   const empleados = await prisma.empleado.findMany({
     where,
     orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
+    include: {
+      usuarioCreador:  { select: { nombres: true, apellidos: true } },
+      auxiliarCreador: { select: { nombres: true, apellidos: true } },
+    },
   })
 
   const wb = new ExcelJS.Workbook()
@@ -65,7 +73,7 @@ export async function GET(request: NextRequest) {
 
   const ws = wb.addWorksheet("Empleados", { views: [{ state: "frozen", ySplit: 4 }] })
 
-  const COLS = 15
+  const COLS = 16
   const endCol = String.fromCharCode(64 + COLS)
 
   ws.mergeCells(`A1:${endCol}1`)
@@ -105,17 +113,23 @@ export async function GET(request: NextRequest) {
     { key: "salarioBase",    width: 16, style: { numFmt: "$#,##0" } },
     { key: "auxTransporte",  width: 12 },
     { key: "estado",         width: 10 },
+    { key: "creadoPor",      width: 22 },
   ]
 
   ws.getRow(4).values = [
     "Apellidos", "Nombres", "Tipo Doc.", "Documento",
     "Centro Costo", "Programa", "Modalidad", "Cargo",
     "Fecha Ingreso", "Fecha Retiro", "Tipo Vinculación", "Tipo Contrato",
-    "Salario Base", "Aux. Transp.", "Estado",
+    "Salario Base", "Aux. Transp.", "Estado", "Creado por",
   ]
   styleHeader(ws, 4)
 
-  empleados.forEach((e, i) => {
+  empleados.forEach((e: any, i: number) => {
+    const creadorNombre = e.usuarioCreador
+      ? `${e.usuarioCreador.nombres} ${e.usuarioCreador.apellidos} (Admin)`
+      : e.auxiliarCreador
+        ? `${e.auxiliarCreador.nombres} ${e.auxiliarCreador.apellidos} (Aux.)`
+        : "Sistema"
     const row = ws.addRow({
       apellidos:     e.apellidos,
       nombres:       e.nombres,
@@ -132,6 +146,7 @@ export async function GET(request: NextRequest) {
       salarioBase:   e.salarioBase,
       auxTransporte: e.tieneAuxilioTransporte ? "Sí" : "No",
       estado:        e.estaActivo ? "Activo" : "Inactivo",
+      creadoPor:     creadorNombre,
     })
     row.height = 17
     row.font = { size: 9, name: "Calibri" }

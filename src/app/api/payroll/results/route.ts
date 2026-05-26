@@ -19,17 +19,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const periodoId = searchParams.get('periodoId')
+    const periodoId  = searchParams.get('periodoId')
+    const empleadoId = searchParams.get('empleadoId')
 
-    if (!periodoId) {
-      return NextResponse.json({ error: "ID de período requerido" }, { status: 400 })
+    if (!periodoId && !empleadoId) {
+      return NextResponse.json({ error: "Se requiere periodoId o empleadoId" }, { status: 400 })
     }
 
+    const where: any = { empresaId }
+    if (periodoId)  where.periodoId  = periodoId
+    if (empleadoId) where.empleadoId = empleadoId
+
     const resultados = await prisma.resultadoNomina.findMany({
-      where: {
-        empresaId: empresaId,
-        periodoId: periodoId
-      },
+      where,
       include: {
         empleado: {
           select: {
@@ -41,13 +43,20 @@ export async function GET(request: NextRequest) {
             programa: true,
             modalidad: true,
           }
+        },
+        periodo: {
+          select: {
+            id: true,
+            nombrePeriodo: true,
+            fechaInicio: true,
+            fechaFin: true,
+            estadoPeriodo: true,
+          }
         }
       },
-      orderBy: {
-        empleado: {
-          apellidos: 'asc'
-        }
-      }
+      orderBy: empleadoId
+        ? { periodo: { fechaInicio: 'desc' } }
+        : { empleado: { apellidos: 'asc' } }
     })
 
     return NextResponse.json(resultados)
