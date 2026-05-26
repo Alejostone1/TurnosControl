@@ -24,42 +24,42 @@ const features = [
   {
     icon: Clock,
     title: "Control de Jornada Laboral",
-    desc: "Gestión de la jornada ordinaria de 47 horas semanales (Ley 2101 de 2021) con registro de horas extras diurnas y nocturnas.",
-    ref: "CST Art. 160–162",
+    desc: "Gestión del tope de jornada ordinaria: 44 h semanales vigentes y 42 h desde el 15 de julio de 2026, según la reducción progresiva de la Ley 2101/2021.",
+    ref: "CST Art. 160–162 · Ley 2101/2021",
     color: "bg-blue-50 text-blue-600 border-blue-100",
   },
   {
     icon: Calendar,
     title: "Programación de Turnos",
-    desc: "Asignación visual de turnos por empleado con control de festivos colombianos, domingos y jornadas especiales.",
+    desc: "Asignación visual de turnos por empleado con control de festivos colombianos, domingos, jornadas especiales y descuento de alimentación configurable.",
     ref: "CST Art. 171–175",
     color: "bg-emerald-50 text-emerald-600 border-emerald-100",
   },
   {
     icon: Calculator,
     title: "Liquidación de Nómina",
-    desc: "Cálculo automático de salario ordinario, recargos nocturnos (35%), dominicales y festivos (75%) según el CST.",
-    ref: "CST Art. 168–170",
+    desc: "Cálculo automático de recargos nocturnos 21:00–06:00 (35%), dominicales y festivos (75%), horas extra diurnas (25%) y extra nocturnas (75%) según el CST y Ley 2466/2025.",
+    ref: "CST Art. 168–170 · Ley 2466/2025",
     color: "bg-purple-50 text-purple-600 border-purple-100",
   },
   {
     icon: Users,
     title: "Gestión de Empleados",
-    desc: "Registro completo con tipo de contrato, vinculación, centro de costo, programa y modalidad de trabajo.",
+    desc: "Registro completo con tipo de contrato, vinculación, centro de costo, programa, modalidad y trazabilidad del creador del registro.",
     ref: "Decreto 1072/2015",
     color: "bg-orange-50 text-orange-600 border-orange-100",
   },
   {
     icon: ShieldCheck,
     title: "Auditoría y Trazabilidad",
-    desc: "Historial completo de todas las acciones realizadas por administradores y auxiliares sobre el sistema.",
-    ref: "Circular 001/2022",
+    desc: "Historial completo e inmutable de todas las acciones realizadas por administradores y auxiliares, con niveles de severidad y filtros avanzados.",
+    ref: "CST Art. 57 · Circular MinTrabajo",
     color: "bg-red-50 text-red-600 border-red-100",
   },
   {
     icon: BarChart2,
     title: "Reportes y Exportación",
-    desc: "Reportes de nómina, turnos programados y resultados de liquidación exportables para presentación ante entidades.",
+    desc: "Reportes de nómina, turnos programados y resultados de liquidación exportables a Excel para presentación ante el Ministerio del Trabajo y la DIAN.",
     ref: "DIAN / MinTrabajo",
     color: "bg-cyan-50 text-cyan-600 border-cyan-100",
   },
@@ -70,30 +70,30 @@ const normas = [
     icon: BookOpen,
     titulo: "Código Sustantivo del Trabajo",
     items: [
-      "Jornada máxima: 47 horas semanales (Ley 2101/2021)",
-      "Recargo nocturno: 35% sobre salario ordinario",
-      "Horas extra diurnas: 25% — Nocturnas: 75%",
-      "Dominicales y festivos: 75% adicional",
+      "Jornada máxima: 44 h/sem. — 42 h/sem. desde jul. 15/2026 (Ley 2101/2021)",
+      "Horario nocturno: 21:00–06:00 — recargo 35% (Ley 2466/2025, Art. 168)",
+      "Extra diurna: +25% · Extra nocturna: +75% sobre el valor hora ordinaria",
+      "Dominical/festivo ordinario: +75% · Extra diurna festiva: +100%",
     ],
   },
   {
     icon: Scale,
     titulo: "Decreto 1072 de 2015",
     items: [
-      "Reglamentación del Sector Trabajo",
-      "Afiliaciones al Sistema de Seguridad Social",
-      "Aportes a salud, pensión y ARL",
-      "Parafiscales: SENA, ICBF, Caja Compensación",
+      "Reglamentación Única del Sector Trabajo (DUR)",
+      "Afiliaciones al Sistema de Seguridad Social Integral",
+      "Aportes: salud 12,5% · pensión 16% · ARL según riesgo",
+      "Parafiscales: SENA 2% · ICBF 3% · Caja de Compensación 4%",
     ],
   },
   {
     icon: Award,
-    titulo: "Prestaciones Sociales",
+    titulo: "Prestaciones Sociales Obligatorias",
     items: [
-      "Prima de servicios: 15 días por semestre",
-      "Cesantías: 1 mes de salario por año",
-      "Vacaciones: 15 días hábiles por año",
-      "Auxilio de transporte según decreto anual",
+      "Prima de servicios: 15 días de salario por semestre (Art. 306 CST)",
+      "Cesantías: 30 días de salario por año + intereses 12% anual",
+      "Vacaciones: 15 días hábiles por año trabajado (Art. 186 CST)",
+      "Auxilio de transporte según decreto de salario mínimo vigente",
     ],
   },
 ]
@@ -266,14 +266,22 @@ export default function LandingPage() {
             <div className="flex-1 text-center sm:text-left">
               <h3 className="text-xl font-bold mb-1">Ley 2101 de 2021 — Reducción Progresiva de Jornada</h3>
               <p className="text-blue-100">
-                A partir de 2023 se inició la reducción progresiva de la jornada laboral máxima en Colombia,
-                pasando de 48 a <strong>44 horas semanales</strong>, con miras a llegar a <strong>42 horas</strong> en 2026.
-                TurnosPro calcula automáticamente los umbrales correctos según el año vigente.
+                La Ley 2101 de 2021 estableció la reducción gradual de la jornada máxima ordinaria, pasando de 48 horas
+                hasta llegar a <strong className="text-white">44 horas semanales actualmente vigentes</strong>.
+                El <strong className="text-white">15 de julio de 2026</strong> el tope quedará fijado definitivamente
+                en <strong className="text-white">42 horas semanales</strong>. TurnosPro ajusta automáticamente
+                los umbrales según la fecha de cada período liquidado.
               </p>
             </div>
-            <div className="text-center shrink-0">
-              <p className="text-4xl font-extrabold">44h</p>
-              <p className="text-blue-200 text-xs">Max. semanal 2026</p>
+            <div className="text-center shrink-0 space-y-2">
+              <div>
+                <p className="text-4xl font-extrabold">44h</p>
+                <p className="text-blue-200 text-xs">Tope vigente 2026</p>
+              </div>
+              <div className="bg-white/15 rounded-lg px-3 py-1.5">
+                <p className="text-2xl font-extrabold text-yellow-300">42h</p>
+                <p className="text-blue-200 text-xs">Desde jul. 15/2026</p>
+              </div>
             </div>
           </div>
         </div>
@@ -420,7 +428,7 @@ export default function LandingPage() {
 
             <div className="text-center text-sm text-gray-400">
               <p>Cumplimiento normativo según el <span className="text-gray-300">Código Sustantivo del Trabajo</span></p>
-              <p className="mt-1">Decreto 1072 de 2015 · Ley 2101 de 2021 · Ministerio del Trabajo</p>
+              <p className="mt-1">Decreto 1072/2015 · Ley 2101/2021 · Ley 2466/2025 · Ministerio del Trabajo</p>
             </div>
 
             <div className="flex gap-3">
@@ -439,9 +447,14 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-800 text-center text-xs text-gray-500">
-            © {new Date().getFullYear()} TurnosPro · Todos los derechos reservados ·
-            Desarrollado para empresas colombianas
+          <div className="mt-8 pt-6 border-t border-gray-800 text-center text-xs text-gray-500 space-y-1">
+            <p>
+              Desarrollado por{" "}
+              <span className="text-gray-300 font-medium">Alejandro Piedrahita</span>
+              {" "}y{" "}
+              <span className="text-gray-300 font-medium">Daniel Colorado</span>
+            </p>
+            <p>© {new Date().getFullYear()} TurnosPro · Todos los derechos reservados · Desarrollado para empresas colombianas</p>
           </div>
         </div>
       </footer>
