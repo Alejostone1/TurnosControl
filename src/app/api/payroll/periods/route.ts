@@ -229,6 +229,7 @@ export async function POST(request: NextRequest) {
         fechaFin: new Date(body.fechaFin),
         fechaCorte: body.fechaCorte ? new Date(body.fechaCorte) : new Date(body.fechaFin),
         configuracionLegalId: configLegal.id,
+        minutosAlimentacion: body.minutosAlimentacion != null ? Number(body.minutosAlimentacion) : null,
         estadoPeriodo: "BORRADOR",
         creadoPor: userId
       },

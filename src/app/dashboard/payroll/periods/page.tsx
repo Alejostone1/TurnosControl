@@ -33,6 +33,7 @@ import {
   RotateCcw,
   Zap,
   Info,
+  UtensilsCrossed,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -65,6 +66,7 @@ interface Periodo {
   estadoPeriodo: string
   fechaInicio: string
   fechaFin: string
+  minutosAlimentacion?: number | null
   _count?: { resultados: number; empleadosAsignados?: number }
 }
 
@@ -597,7 +599,10 @@ export default function PayrollPeriodsPage() {
     fechaInicio: "",
     fechaFin: "",
     documentos: "",
+    minutosAlimentacion: 30 as number,
   })
+  const [formBreakMode, setFormBreakMode] = useState<number>(30)   // 0/30/60/-1(custom)
+  const [formBreakCustom, setFormBreakCustom] = useState<number>(45)
   const [formFilterCC, setFormFilterCC] = useState("")
   const [formFilterProg, setFormFilterProg] = useState("")
   const [formFilterMod, setFormFilterMod] = useState("")
@@ -652,7 +657,10 @@ export default function PayrollPeriodsPage() {
       fechaInicio: dates.inicio,
       fechaFin: dates.fin,
       documentos: "",
+      minutosAlimentacion: 30,
     })
+    setFormBreakMode(30)
+    setFormBreakCustom(45)
     setFormFilterCC("")
     setFormFilterProg("")
     setFormFilterMod("")
@@ -931,6 +939,70 @@ export default function PayrollPeriodsPage() {
                   </div>
                 </div>
 
+                {/* ── Descuento de Alimentación ── */}
+                <div className="sm:col-span-2 rounded-xl border-2 border-orange-200 bg-orange-50/60 p-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <UtensilsCrossed className="h-4 w-4 text-orange-600 shrink-0" />
+                    <Label className="text-xs font-semibold text-orange-800">Descuento de Alimentación (por defecto del período)</Label>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap items-center">
+                    {([0, 30, 60] as const).map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => {
+                          setFormBreakMode(v)
+                          setFormData(prev => ({ ...prev, minutosAlimentacion: v }))
+                        }}
+                        className={[
+                          "text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+                          formBreakMode === v
+                            ? "border-orange-500 bg-orange-100 text-orange-900 shadow-sm"
+                            : "border-border text-muted-foreground hover:border-orange-300 hover:text-orange-700 bg-white",
+                        ].join(" ")}
+                      >
+                        {v === 0 ? "Sin descuento" : v === 30 ? "30 min" : "1 hora"}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormBreakMode(-1)
+                        setFormData(prev => ({ ...prev, minutosAlimentacion: formBreakCustom }))
+                      }}
+                      className={[
+                        "text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+                        formBreakMode === -1
+                          ? "border-orange-500 bg-orange-100 text-orange-900 shadow-sm"
+                          : "border-border text-muted-foreground hover:border-orange-300 hover:text-orange-700 bg-white",
+                      ].join(" ")}
+                    >
+                      Personalizado
+                    </button>
+                    {formBreakMode === -1 && (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={120}
+                          value={formBreakCustom}
+                          onChange={e => {
+                            const v = Math.max(0, parseInt(e.target.value) || 0)
+                            setFormBreakCustom(v)
+                            setFormData(prev => ({ ...prev, minutosAlimentacion: v }))
+                          }}
+                          className="h-8 w-20 text-xs"
+                        />
+                        <span className="text-xs text-muted-foreground">min</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-orange-700/80 flex items-start gap-1.5">
+                    <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                    Este valor se aplica a todos los turnos del período. Puede sobreescribirse turno a turno desde la programación individual.
+                  </p>
+                </div>
+
                 {/* Selección de empleados */}
                 <div className="space-y-3 border-t pt-4">
                   <h3 className="font-medium text-sm flex items-center gap-2">
@@ -1016,6 +1088,11 @@ export default function PayrollPeriodsPage() {
                     <Badge variant="outline" className="text-[11px] gap-1 bg-violet-50 text-violet-700 border-violet-200">
                       ⚡ {periodo.tipoCalculoHorasExtras === "DIARIO" ? "Cálculo Diario" : "Cálculo Semanal"}
                     </Badge>
+                    {periodo.minutosAlimentacion != null && (
+                      <Badge variant="outline" className="text-[11px] gap-1 bg-orange-50 text-orange-700 border-orange-200">
+                        🍽 {periodo.minutosAlimentacion === 0 ? "Sin desc. alim." : `${periodo.minutosAlimentacion}min alim.`}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5 shrink-0" />
