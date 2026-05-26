@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Save, X, Plus, User, Settings, Clock, BarChart2, ArrowLeft, ArrowRight, CalendarRange, Search, Filter, Building2, Users, Lock, AlertTriangle, UtensilsCrossed, ChevronLeft, ChevronRight } from "lucide-react"
+import { Save, X, Plus, User, Settings, Clock, BarChart2, ArrowLeft, ArrowRight, CalendarRange, Search, Filter, Building2, Users, Lock, AlertTriangle, UtensilsCrossed, ChevronLeft, ChevronRight, FileDown } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -346,6 +346,7 @@ function SchedulesPageInner() {
   const periodoNombre = searchParams.get("periodoNombre")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [exportando, setExportando] = useState(false)
   const [dirtyDates, setDirtyDates] = useState<Set<string>>(new Set())
   const [showResults, setShowResults] = useState(false)
   const [horasSemana, setHorasSemana] = useState(44)
@@ -658,6 +659,37 @@ function SchedulesPageInner() {
     closePicker()
   }
 
+  async function exportarExcel() {
+    if (!selectedEmpleadoId || !startDate || !endDate) return
+    setExportando(true)
+    try {
+      const params = new URLSearchParams({
+        empleadoId: selectedEmpleadoId,
+        startDate,
+        endDate,
+      })
+      if (periodBreakMinutes > 0) params.set("periodoBreakMin", String(periodBreakMinutes))
+      const res = await fetch(`/api/schedules/export?${params}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Error al exportar")
+        return
+      }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      const emp  = selectedEmpleado ? `${selectedEmpleado.apellidos}_${selectedEmpleado.nombres}` : "empleado"
+      a.href     = url
+      a.download = `Turnos_${emp}_${startDate}_${endDate}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error("Error de conexión al exportar")
+    } finally {
+      setExportando(false)
+    }
+  }
+
   async function saveAssignments() {
     if (!dirtyDates.size) return toast.info("No hay cambios pendientes")
     setSaving(true)
@@ -790,15 +822,28 @@ function SchedulesPageInner() {
             </Button>
           </Link>
           {selectedEmpleado && (
-            <Button
-              variant={showResults ? "default" : "outline"}
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setShowResults(v => !v)}
-            >
-              <BarChart2 className="h-3.5 w-3.5" />
-              {showResults ? "Ver Programación" : "Ver Resultados"}
-            </Button>
+            <>
+              <Button
+                variant={showResults ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setShowResults(v => !v)}
+              >
+                <BarChart2 className="h-3.5 w-3.5" />
+                {showResults ? "Ver Programación" : "Ver Resultados"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-400"
+                onClick={exportarExcel}
+                disabled={exportando}
+                title="Exportar turnos del empleado en el período seleccionado"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                {exportando ? "Exportando…" : "Excel"}
+              </Button>
+            </>
           )}
           <Button
             onClick={saveAssignments}

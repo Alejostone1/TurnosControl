@@ -121,14 +121,16 @@ export async function GET(request: NextRequest) {
     const empresaId = (token as any)?.empresaId
     if (!empresaId) return NextResponse.json({ error: "Empresa no encontrada" }, { status: 400 })
 
-    const sp          = request.nextUrl.searchParams
-    const startDate   = sp.get("startDate")
-    const endDate     = sp.get("endDate")
-    const empleadoId  = sp.get("empleadoId")
-    const centroCosto = sp.get("centroCosto")
-    const programa    = sp.get("programa")
-    const modalidad   = sp.get("modalidad")
-    const search      = sp.get("search")
+    const sp             = request.nextUrl.searchParams
+    const startDate      = sp.get("startDate")
+    const endDate        = sp.get("endDate")
+    const empleadoId     = sp.get("empleadoId")
+    const centroCosto    = sp.get("centroCosto")
+    const programa       = sp.get("programa")
+    const modalidad      = sp.get("modalidad")
+    const search         = sp.get("search")
+    const periodoBreakParam = sp.get("periodoBreakMin")
+    const periodoBreakMin   = periodoBreakParam != null ? Number(periodoBreakParam) : null
 
     // Configuración legal de la empresa (para nocturno y descanso)
     const configLegal = await prisma.configuracionLegal.findFirst({
@@ -213,11 +215,16 @@ export async function GET(request: NextRequest) {
     ws.getColumn(COL.NRO_SEM).width   = 7
 
     // ── Fila 1: Título ────────────────────────────────────────────────────────
+    const primerEmp: any = asignaciones[0]?.empleado
+    const esIndividual = !!empleadoId && primerEmp
+    const titleText = esIndividual
+      ? `HORAS TRABAJADAS — ${(primerEmp.apellidos + " " + primerEmp.nombres).toUpperCase()}`
+      : "HISTORIAL DE PROGRAMACIONES"
     ws.getRow(1).height = 36
     ws.mergeCells(1, 1, 1, TOTAL_COLS)
     const titleCell = ws.getCell(1, 1)
-    titleCell.value = "HISTORIAL DE PROGRAMACIONES"
-    titleCell.font  = { bold: true, size: 16, color: { argb: C.TITLE_FG }, name: "Calibri" }
+    titleCell.value = titleText
+    titleCell.font  = { bold: true, size: esIndividual ? 14 : 16, color: { argb: C.TITLE_FG }, name: "Calibri" }
     titleCell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: C.TITLE_BG } }
     titleCell.alignment = { horizontal: "center", vertical: "middle" }
 
@@ -226,8 +233,10 @@ export async function GET(request: NextRequest) {
     ws.mergeCells(2, 1, 2, TOTAL_COLS)
     const infoStr = [
       startDate && endDate ? `Período: ${startDate} → ${endDate}` : "",
+      esIndividual ? `Doc: ${primerEmp.numeroDocumento}` : "",
       centroCosto ? `CC: ${centroCosto}` : "",
       programa    ? `Programa: ${programa}` : "",
+      periodoBreakMin != null ? `Desc. alim.: ${periodoBreakMin}min` : "",
       `Total registros: ${asignaciones.length}`,
       `Generado: ${new Date().toLocaleString("es-CO")}`,
     ].filter(Boolean).join("   |   ")
@@ -318,7 +327,7 @@ export async function GET(request: NextRequest) {
       let breakMin = 0
 
       if (inicioStr && finStr && a.concepto.tipoImpacto !== "NEUTRO" && a.concepto.afectaLiquidacion) {
-        const baseBreak = getEffectiveBreakMin(a.minutosAlimentacion, null, defaultBreakMin)
+        const baseBreak = getEffectiveBreakMin(a.minutosAlimentacion, periodoBreakMin, defaultBreakMin)
         // 24T = turno de 24h → doble descuento de alimentación
         breakMin = a.concepto.codigo === "24T" ? baseBreak * 2 : baseBreak
         cls = calcularClasificacion(
