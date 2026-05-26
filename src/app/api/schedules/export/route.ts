@@ -318,7 +318,9 @@ export async function GET(request: NextRequest) {
       let breakMin = 0
 
       if (inicioStr && finStr && a.concepto.tipoImpacto !== "NEUTRO" && a.concepto.afectaLiquidacion) {
-        breakMin = getEffectiveBreakMin(a.minutosAlimentacion, null, defaultBreakMin)
+        const baseBreak = getEffectiveBreakMin(a.minutosAlimentacion, null, defaultBreakMin)
+        // 24T = turno de 24h → doble descuento de alimentación
+        breakMin = a.concepto.codigo === "24T" ? baseBreak * 2 : baseBreak
         cls = calcularClasificacion(
           inicioStr, finStr, esFest,
           acumMin, topeMin,

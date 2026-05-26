@@ -702,7 +702,8 @@ export default function ProgramacionMasivaPage() {
     for (const entry of Object.values(pendingMap)) {
       const c = conceptos.find(x => x.id === entry.conceptoId)
       if (!c) continue
-      const breakM = entry.minutosAlimentacion ?? masivBreakMin
+      const baseBreakM = entry.minutosAlimentacion ?? masivBreakMin
+      const breakM = c.codigo === "24T" ? baseBreakM * 2 : baseBreakM
       const h = getConceptoHoras(c, entry.horaInicio, entry.horaFin, breakM)
       ord += Math.min(h, 8)
       ext += Math.max(0, h - 8)

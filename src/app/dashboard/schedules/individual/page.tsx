@@ -539,11 +539,12 @@ function SchedulesPageInner() {
   }
 
   // Effective meal break for a given assignment (individual override > period default)
+  // 24T shifts get double deduction — two meals in a 24-hour shift
   function getEffectiveBreak(asignacion: AsignacionTurno): number {
-    if (asignacion.minutosAlimentacion !== null && asignacion.minutosAlimentacion !== undefined) {
-      return asignacion.minutosAlimentacion
-    }
-    return periodBreakMinutes
+    const base = (asignacion.minutosAlimentacion != null)
+      ? asignacion.minutosAlimentacion
+      : periodBreakMinutes
+    return asignacion.concepto.codigo === "24T" ? base * 2 : base
   }
 
   function openPicker(dk: string) {

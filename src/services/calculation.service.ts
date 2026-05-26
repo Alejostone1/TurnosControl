@@ -344,13 +344,13 @@ export class CalculationService {
       const valorHora  = this.calcularValorHora(empleado.salarioBase, configLegal.formulaValorHora)
 
       // Cadena de prioridad para descanso: Asignación > Período > ConfigLegal
-      const breakMin: number = esTurno24T
-        ? 0
-        : (asignacion.minutosAlimentacion != null
-            ? asignacion.minutosAlimentacion
-            : periodoBreakMin != null
-              ? periodoBreakMin
-              : configLegal.duracionAlmuerzaMinutos ?? 0)
+      // 24T = turno de 24h → doble descuento (dos comidas)
+      const baseBreak: number = asignacion.minutosAlimentacion != null
+        ? asignacion.minutosAlimentacion
+        : periodoBreakMin != null
+          ? periodoBreakMin
+          : configLegal.duracionAlmuerzaMinutos ?? 0
+      const breakMin: number = esTurno24T ? baseBreak * 2 : baseBreak
 
       const resultadoDia: ResultadoDia = {
         horasOrdinarias: 0, horasNocturnas: 0, horasFestivas: 0, horasNoctFestivas: 0,
