@@ -1,20 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Users, 
-  Calendar, 
-  Calculator, 
-  FileText, 
-  Clock, 
+import {
+  Users,
+  Calendar,
+  Calculator,
+  FileText,
+  Clock,
   Activity,
   ArrowUp,
   ArrowDown,
+  Zap,
   MoreHorizontal,
-  Zap
 } from "lucide-react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
@@ -27,15 +26,12 @@ interface StatCard {
   icon: React.ComponentType<{ className?: string }>
   color: string
   bgColor: string
-  trend?: {
-    value: number
-    isUp: boolean
-  }
+  trend?: { value: number; isUp: boolean }
 }
 
 interface ActivityItem {
   id: string
-  type: 'payroll' | 'employee' | 'schedule' | 'calculation'
+  type: "payroll" | "employee" | "schedule" | "calculation"
   title: string
   description: string
   time: string
@@ -49,135 +45,78 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
+  useEffect(() => { fetchDashboardData() }, [])
 
   const fetchDashboardData = async () => {
     try {
-      // Obtener estadísticas reales
       const [empleadosRes, periodosRes, turnosRes] = await Promise.all([
-        fetch('/api/employees'),
-        fetch('/api/payroll/periods'),
-        fetch('/api/schedules')
+        fetch("/api/employees"),
+        fetch("/api/payroll/periods"),
+        fetch("/api/schedules"),
       ])
 
       const empleados = await empleadosRes.json()
-      const periodos = await periodosRes.json()
-      const turnos = await turnosRes.json()
+      const periodos  = await periodosRes.json()
+      const turnos    = await turnosRes.json()
 
-      // Calcular estadísticas del mes actual
       const currentMonth = new Date().getMonth()
-      const currentYear = new Date().getFullYear()
-      
+      const currentYear  = new Date().getFullYear()
+
       const empleadosActivos = empleados.filter((emp: any) => emp.estaActivo).length
-      const turnosDelMes = turnos.filter((turno: any) => {
-        const turnoDate = new Date(turno.fechaTurno)
-        return turnoDate.getMonth() === currentMonth && turnoDate.getFullYear() === currentYear
+      const turnosDelMes     = turnos.filter((turno: any) => {
+        const d = new Date(turno.fechaTurno)
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear
       }).length
-      
-      const periodosCerrados = periodos.filter((p: any) => 
-        ['CALCULADO', 'APROBADO', 'CERRADO'].includes(p.estadoPeriodo)
+      const periodosCerrados = periodos.filter((p: any) =>
+        ["CALCULADO", "APROBADO", "CERRADO"].includes(p.estadoPeriodo)
       ).length
 
-      // Estadísticas calculadas
-      const calculatedStats: StatCard[] = [
+      setStats([
         {
           title: "Empleados Activos",
           value: empleadosActivos,
-          description: "Total de empleados registrados",
+          description: "Total registrados",
           icon: Users,
           color: "text-blue-600",
           bgColor: "bg-blue-100",
-          trend: {
-            value: 12,
-            isUp: true
-          }
+          trend: { value: 12, isUp: true },
         },
         {
           title: "Turnos del Mes",
           value: turnosDelMes,
-          description: "Turnos programados este mes",
+          description: "Programados este mes",
           icon: Calendar,
           color: "text-green-600",
           bgColor: "bg-green-100",
-          trend: {
-            value: 8,
-            isUp: true
-          }
+          trend: { value: 8, isUp: true },
         },
         {
           title: "Horas Programadas",
           value: Math.round(turnosDelMes * 8),
-          description: "Horas acumuladas este mes",
+          description: "Horas acumuladas",
           icon: Clock,
           color: "text-purple-600",
           bgColor: "bg-purple-100",
-          trend: {
-            value: 15,
-            isUp: true
-          }
+          trend: { value: 15, isUp: true },
         },
         {
           title: "Períodos Procesados",
           value: periodosCerrados,
-          description: "Períodos de nómina completados",
+          description: "Períodos completados",
           icon: Calculator,
           color: "text-orange-600",
           bgColor: "bg-orange-100",
-          trend: {
-            value: 5,
-            isUp: false
-          }
+          trend: { value: 5, isUp: false },
         },
-      ]
+      ])
 
-      setStats(calculatedStats)
-
-      // Actividad reciente (simulada por ahora)
-      const activity: ActivityItem[] = [
-        {
-          id: '1',
-          type: 'payroll',
-          title: 'Período de nómina calculado',
-          description: '12 empleados procesados',
-          time: 'Hace 2 horas',
-          color: 'bg-green-500',
-          icon: Calculator
-        },
-        {
-          id: '2',
-          type: 'employee',
-          title: 'Nuevo empleado registrado',
-          description: 'María Rodríguez',
-          time: 'Hace 5 horas',
-          color: 'bg-blue-500',
-          icon: Users
-        },
-        {
-          id: '3',
-          type: 'schedule',
-          title: 'Turnos actualizados',
-          description: '48 turnos modificados',
-          time: 'Ayer',
-          color: 'bg-purple-500',
-          icon: Calendar
-        },
-        {
-          id: '4',
-          type: 'calculation',
-          title: 'Cálculo automático completado',
-          description: 'Proceso nocturno exitoso',
-          time: 'Hace 2 días',
-          color: 'bg-orange-500',
-          icon: Activity
-        }
-      ]
-
-      setRecentActivity(activity)
-
-    } catch (error) {
-      console.error("Error al cargar datos del dashboard:", error)
+      setRecentActivity([
+        { id: "1", type: "payroll",      title: "Período de nómina calculado",    description: "12 empleados procesados",  time: "Hace 2h",    color: "bg-green-500",  icon: Calculator },
+        { id: "2", type: "employee",     title: "Nuevo empleado registrado",      description: "María Rodríguez",          time: "Hace 5h",    color: "bg-blue-500",   icon: Users },
+        { id: "3", type: "schedule",     title: "Turnos actualizados",            description: "48 turnos modificados",    time: "Ayer",       color: "bg-purple-500", icon: Calendar },
+        { id: "4", type: "calculation",  title: "Cálculo automático completado",  description: "Proceso nocturno exitoso", time: "Hace 2 días", color: "bg-orange-500", icon: Activity },
+      ])
+    } catch {
       toast.error("Error al cargar datos del dashboard")
     } finally {
       setLoading(false)
@@ -185,202 +124,139 @@ export default function DashboardPage() {
   }
 
   const quickActions = [
-    {
-      title: "Programar Turnos",
-      description: "Asignar turnos a los empleados",
-      icon: Calendar,
-      href: "/dashboard/schedules",
-      color: "bg-blue-500 hover:bg-blue-600",
-      badge: "Popular"
-    },
-    {
-      title: "Calcular Nómina",
-      description: "Procesar período de nómina",
-      icon: Calculator,
-      href: "/dashboard/payroll",
-      color: "bg-green-500 hover:bg-green-600",
-      badge: "Nuevo"
-    },
-    {
-      title: "Gestionar Empleados",
-      description: "Agregar o editar empleados",
-      icon: Users,
-      href: "/dashboard/employees",
-      color: "bg-purple-500 hover:bg-purple-600"
-    },
-    {
-      title: "Ver Reportes",
-      description: "Exportar informes y análisis",
-      icon: FileText,
-      href: "/dashboard/reports",
-      color: "bg-orange-500 hover:bg-orange-600"
-    },
+    { title: "Programar Turnos",    description: "Asignar turnos a empleados",   icon: Calendar,   href: "/dashboard/schedules",  color: "bg-blue-500 hover:bg-blue-600" },
+    { title: "Calcular Nómina",     description: "Procesar período de nómina",   icon: Calculator, href: "/dashboard/payroll",     color: "bg-green-500 hover:bg-green-600" },
+    { title: "Gestionar Empleados", description: "Agregar o editar empleados",   icon: Users,      href: "/dashboard/employees",   color: "bg-purple-500 hover:bg-purple-600" },
+    { title: "Ver Reportes",        description: "Exportar informes y análisis", icon: FileText,   href: "/dashboard/reports",     color: "bg-orange-500 hover:bg-orange-600" },
   ]
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-          ))}
+      <div className="space-y-4 animate-pulse">
+        <div className="h-12 bg-muted rounded-xl w-2/3" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-xl" />)}
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        <div className="grid grid-cols-2 gap-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-muted rounded-xl" />)}
         </div>
       </div>
     )
   }
 
+  const firstName = session?.user?.name?.split(" ")[0] ?? ""
+
   return (
-    <div className="space-y-8 min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
-      {/* Header Section - Simple sin gradiente */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-              Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 text-lg">
-              {(session as any)?.user?.empresaNombre || 'Sistema'} de Gestión de Turnos y Nómina
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Bienvenido</p>
-            <p className="text-gray-800 dark:text-white font-medium">{session?.user?.name}</p>
-          </div>
+    <div className="space-y-4 md:space-y-6">
+
+      {/* ── Greeting header ── */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+            {firstName ? `Bienvenido, ${firstName}` : "Dashboard"}
+          </h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+            {(session as any)?.user?.empresaNombre
+              ? `${(session as any).user.empresaNombre} — Turnos y Nómina`
+              : "Sistema de Turnos y Nómina"}
+          </p>
         </div>
+        <p className="text-[11px] text-muted-foreground shrink-0 mt-1 text-right capitalize">
+          {new Date().toLocaleDateString("es-CO", {
+            weekday: "short", day: "numeric", month: "short", year: "numeric",
+          })}
+        </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <Card key={stat.title} className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 dark:bg-gray-800">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <div className="space-y-1">
-                <CardTitle className="text-sm font-semibold text-gray-800 dark:text-white">
-                  {stat.title}
-                </CardTitle>
+      {/* ── KPI Cards — 2×2 on mobile, 4×1 on lg ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map(stat => (
+          <Card key={stat.title} className="shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className={`p-1.5 md:p-2 rounded-lg ${stat.bgColor} shrink-0`}>
+                  <stat.icon className={`h-3.5 w-3.5 md:h-4 md:w-4 ${stat.color}`} />
+                </div>
                 {stat.trend && (
-                  <div className="flex items-center gap-1">
-                    {stat.trend.isUp ? (
-                      <ArrowUp className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <ArrowDown className="h-3 w-3 text-red-500" />
-                    )}
-                    <span className={`text-xs font-medium ${stat.trend.isUp ? 'text-green-500' : 'text-red-500'}`}>
-                      {stat.trend.isUp ? '+' : ''}{stat.trend.value}%
+                  <div className="flex items-center gap-0.5">
+                    {stat.trend.isUp
+                      ? <ArrowUp className="h-2.5 w-2.5 text-green-500" />
+                      : <ArrowDown className="h-2.5 w-2.5 text-red-500" />
+                    }
+                    <span className={`text-[10px] font-medium ${stat.trend.isUp ? "text-green-500" : "text-red-500"}`}>
+                      {stat.trend.value}%
                     </span>
                   </div>
                 )}
               </div>
-              <div className={`p-3 rounded-xl ${stat.bgColor} shadow-md`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {stat.description}
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+              </p>
+              <p className="text-[11px] md:text-xs text-muted-foreground mt-0.5 leading-tight">
+                {stat.title}
               </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Quick Actions & Activity */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Quick Actions */}
-        <div className="lg:col-span-2">
-          <Card className="border-0 shadow-lg h-full dark:bg-gray-800">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Zap className="h-6 w-6 text-yellow-500" />
-                Acciones Rápidas
-              </CardTitle>
-              <CardDescription className="text-base">
-                Accesos directos a las funciones más importantes
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                {quickActions.map((action) => (
-                  <Link key={action.href} href={action.href}>
-                    <div className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-600 p-4 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all duration-300">
-                      {action.badge && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {action.badge}
-                          </Badge>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-2 rounded-lg ${action.color} text-white shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                          <action.icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {action.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {action.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      {/* ── Quick Actions + Recent Activity ── */}
+      <div className="grid gap-4 lg:grid-cols-3">
+
+        {/* Quick Actions — 2/3 on lg */}
+        <div className="lg:col-span-2 space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-yellow-500" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Acciones Rápidas</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map(action => (
+              <Link key={action.href} href={action.href}>
+                <div className="group rounded-xl border p-3 md:p-4 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer h-full">
+                  <div className={`w-9 h-9 rounded-xl ${action.color} flex items-center justify-center mb-2.5 transition-opacity`}>
+                    <action.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-white leading-tight">
+                    {action.title}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight line-clamp-2">
+                    {action.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Recent Activity */}
-        <div>
-          <Card className="border-0 shadow-lg h-full dark:bg-gray-800">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Activity className="h-6 w-6 text-blue-500" />
-                Actividad Reciente
-              </CardTitle>
-              <CardDescription className="text-base">
-                Últimas acciones en el sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                    <div className={`p-2 rounded-full ${activity.color} text-white mt-1`}>
-                      <activity.icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 dark:text-white text-sm truncate">
-                        {activity.title}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
-                <div className="text-center pt-4">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <MoreHorizontal className="h-4 w-4 mr-2" />
-                    Ver toda la actividad
-                  </Button>
+        {/* Recent Activity — 1/3 on lg */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-blue-500" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Actividad Reciente</h2>
+          </div>
+          <div className="rounded-xl border divide-y overflow-hidden">
+            {recentActivity.map(item => (
+              <div key={item.id} className="flex items-start gap-2.5 p-3 hover:bg-muted/30 transition-colors">
+                <div className={`w-7 h-7 rounded-full ${item.color} flex items-center justify-center shrink-0 mt-0.5`}>
+                  <item.icon className="h-3 w-3 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-gray-800 dark:text-white truncate leading-tight">
+                    {item.title}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {item.description} · {item.time}
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            ))}
+            <div className="p-2">
+              <Button variant="ghost" size="sm" className="w-full text-xs h-8 text-muted-foreground">
+                <MoreHorizontal className="h-3.5 w-3.5 mr-1.5" />
+                Ver toda la actividad
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

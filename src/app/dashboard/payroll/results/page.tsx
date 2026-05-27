@@ -568,11 +568,11 @@ function ResultsPageInner() {
               </Badge>
             </div>
 
-            {/* Column headers */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 px-4 py-2 bg-muted/10 border-b text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+            {/* Column headers — desktop only */}
+            <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 px-4 py-2 bg-muted/10 border-b text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               <span>Empleado</span>
               <span className="text-right">Horas</span>
-              <span className="text-right hidden sm:block">Salario base</span>
+              <span className="text-right hidden lg:block">Salario base</span>
               <span className="text-right">Devengado</span>
               <span className="text-right">Neto a pagar</span>
               <span />
@@ -581,71 +581,98 @@ function ResultsPageInner() {
             {/* Rows */}
             <div className="divide-y">
               {resultados.map(r => (
-                <div
-                  key={r.id}
-                  className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center px-4 py-3 hover:bg-muted/20 transition-colors"
-                >
-                  {/* Employee */}
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <div key={r.id} className="hover:bg-muted/20 transition-colors">
+
+                  {/* Mobile card layout */}
+                  <div className="flex items-center gap-2.5 px-4 py-3 sm:hidden">
                     <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                       {r.empleado.nombres.charAt(0)}{r.empleado.apellidos.charAt(0)}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
                         {r.empleado.nombres} {r.empleado.apellidos}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">CC {r.empleado.numeroDocumento}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        CC {r.empleado.numeroDocumento} · {r.totalHorasTrabajadas.toFixed(1)} h
+                        {r.totalHorasExtras > 0 && ` (+${r.totalHorasExtras.toFixed(1)} ext.)`}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Dev: {fmtCOP(r.totalDevengado)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-1.5">
+                      <p className="text-sm font-bold text-green-700">{fmtCOP(r.netoAPagar)}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 text-xs h-7 border-purple-200 text-purple-700 hover:bg-purple-50"
+                        onClick={() => setDetalleVista(r)}
+                      >
+                        <Eye className="h-3 w-3" />
+                        Ver
+                      </Button>
                     </div>
                   </div>
 
-                  {/* Hours */}
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-blue-700">{r.totalHorasTrabajadas.toFixed(1)} h</p>
-                    {r.totalHorasExtras > 0 && (
-                      <p className="text-[10px] text-amber-600">+{r.totalHorasExtras.toFixed(1)} extra</p>
-                    )}
+                  {/* Desktop grid layout */}
+                  <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center px-4 py-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                        {r.empleado.nombres.charAt(0)}{r.empleado.apellidos.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {r.empleado.nombres} {r.empleado.apellidos}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">CC {r.empleado.numeroDocumento}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-blue-700">{r.totalHorasTrabajadas.toFixed(1)} h</p>
+                      {r.totalHorasExtras > 0 && (
+                        <p className="text-[10px] text-amber-600">+{r.totalHorasExtras.toFixed(1)} extra</p>
+                      )}
+                    </div>
+                    <div className="text-right hidden lg:block">
+                      <p className="text-sm text-muted-foreground">{fmtCOP(r.salarioBase)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{fmtCOP(r.totalDevengado)}</p>
+                      {r.totalDeducciones > 0 && (
+                        <p className="text-[10px] text-red-500">- {fmtCOP(r.totalDeducciones)}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-green-700">{fmtCOP(r.netoAPagar)}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 text-xs h-7 border-purple-200 text-purple-700 hover:bg-purple-50 shrink-0"
+                      onClick={() => setDetalleVista(r)}
+                    >
+                      <Eye className="h-3 w-3" />
+                      Ver
+                    </Button>
                   </div>
-
-                  {/* Salary base */}
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm text-muted-foreground">{fmtCOP(r.salarioBase)}</p>
-                  </div>
-
-                  {/* Devengado */}
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{fmtCOP(r.totalDevengado)}</p>
-                    {r.totalDeducciones > 0 && (
-                      <p className="text-[10px] text-red-500">- {fmtCOP(r.totalDeducciones)}</p>
-                    )}
-                  </div>
-
-                  {/* Neto */}
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-green-700">{fmtCOP(r.netoAPagar)}</p>
-                  </div>
-
-                  {/* Action */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1 text-xs h-7 border-purple-200 text-purple-700 hover:bg-purple-50 shrink-0"
-                    onClick={() => setDetalleVista(r)}
-                  >
-                    <Eye className="h-3 w-3" />
-                    Ver
-                  </Button>
                 </div>
               ))}
             </div>
 
-            {/* Footer totals */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center px-4 py-3 border-t bg-muted/20 font-bold text-sm">
+            {/* Footer totals — desktop only */}
+            <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center px-4 py-3 border-t bg-muted/20 font-bold text-sm">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">Totales</span>
               <span className="text-right text-blue-700">{totalHoras.toFixed(1)} h</span>
-              <span className="hidden sm:block" />
+              <span className="hidden lg:block" />
               <span className="text-right">{fmtCOP(totalDevengado)}</span>
               <span className="text-right text-green-700">{fmtCOP(totalNeto)}</span>
               <span />
+            </div>
+
+            {/* Footer totals — mobile summary */}
+            <div className="sm:hidden px-4 py-3 border-t bg-muted/20 flex items-center justify-between gap-4 text-sm font-bold">
+              <span className="text-muted-foreground text-xs">{resultados.length} empleados · {totalHoras.toFixed(1)} h</span>
+              <span className="text-green-700">{fmtCOP(totalNeto)}</span>
             </div>
           </div>
         </>

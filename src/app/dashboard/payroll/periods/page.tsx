@@ -804,7 +804,7 @@ export default function PayrollPeriodsPage() {
   if (loading) {
     return (
       <div className="space-y-5">
-        <h1 className="text-3xl font-bold">Períodos de Nómina</h1>
+        <h1 className="text-xl md:text-3xl font-bold">Períodos de Nómina</h1>
         <div className="animate-pulse space-y-3">
           <div className="h-20 bg-muted rounded-xl" />
           <div className="h-48 bg-muted rounded-xl" />
@@ -817,16 +817,16 @@ export default function PayrollPeriodsPage() {
     <div className="space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Períodos de Nómina</h1>
+          <h1 className="text-xl md:text-3xl font-bold">Períodos de Nómina</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Crea períodos, asigna empleados y programa sus turnos
           </p>
         </div>
         <Button
           onClick={() => { setShowCreateForm(v => !v); if (!showCreateForm) resetForm() }}
-          className="gap-1.5 shrink-0"
+          className="gap-1.5 shrink-0 self-start"
           variant={showCreateForm ? "outline" : "default"}
         >
           {showCreateForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -1101,10 +1101,10 @@ export default function PayrollPeriodsPage() {
               )}
 
               {/* Card header */}
-              <div className="px-5 py-4 flex items-start justify-between gap-4">
+              <div className="px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-lg leading-tight">{periodo.nombrePeriodo}</h3>
+                    <h3 className="font-bold text-base sm:text-lg leading-tight">{periodo.nombrePeriodo}</h3>
                     <Badge
                       variant="outline"
                       className={`text-[11px] font-semibold gap-1 ${cfg.color}`}
@@ -1133,7 +1133,7 @@ export default function PayrollPeriodsPage() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                <div className="flex flex-wrap gap-2 sm:justify-end">
                   {/* Primary: go to period detail */}
                   <Link href={`/dashboard/payroll/periods/${periodo.id}`}>
                     <Button size="sm" className="gap-1.5">
