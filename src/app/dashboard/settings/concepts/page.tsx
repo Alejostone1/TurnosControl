@@ -249,27 +249,29 @@ export default function ConceptsSettingsPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <Link href="/dashboard/settings">
-          <Button variant="ghost" size="icon" className="mt-0.5 shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Conceptos de Nómina</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Define los tipos de turno, ausencias y permisos que se asignan a los empleados
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <Link href="/dashboard/settings">
+            <Button variant="ghost" size="icon" className="mt-0.5 shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-3xl font-bold">Conceptos de Nómina</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              Define los tipos de turno, ausencias y permisos que se asignan a los empleados
+            </p>
+          </div>
         </div>
-        <Button onClick={openCreate} className="gap-2 shrink-0">
+        <Button onClick={openCreate} className="gap-2 shrink-0 self-start">
           <Plus className="h-4 w-4" />
           Nuevo concepto
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por código o nombre…"
@@ -278,7 +280,7 @@ export default function ConceptsSettingsPage() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm shrink-0">
           <Switch
             id="show-inactive"
             checked={showInactive}

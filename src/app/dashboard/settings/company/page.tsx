@@ -123,7 +123,7 @@ export default function CompanySettingsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Configuración de la Empresa</h1>
+        <h1 className="text-xl md:text-3xl font-bold">Configuración de la Empresa</h1>
         <div className="animate-pulse space-y-4">
           <div className="h-96 bg-gray-200 rounded-lg"></div>
         </div>
@@ -134,7 +134,7 @@ export default function CompanySettingsPage() {
   if (!empresa) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Configuración de la Empresa</h1>
+        <h1 className="text-xl md:text-3xl font-bold">Configuración de la Empresa</h1>
         <div className="text-center py-12">
           <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <p className="text-lg text-gray-500">No se encontró información de la empresa</p>
@@ -148,18 +148,18 @@ export default function CompanySettingsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Configuración de la Empresa</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-3xl font-bold">Configuración de la Empresa</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
             Gestiona la información básica y datos de contacto de tu empresa
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={fetchEmpresa} disabled={saving}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Restaurar
           </Button>
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={!hasChanges || saving}
             className="bg-green-600 hover:bg-green-700"
           >

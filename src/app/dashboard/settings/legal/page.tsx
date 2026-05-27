@@ -299,7 +299,7 @@ export default function LegalSettingsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Configuración Legal</h1>
+        <h1 className="text-xl md:text-3xl font-bold">Configuración Legal</h1>
         <div className="animate-pulse h-96 bg-gray-200 rounded"></div>
       </div>
     )
@@ -310,12 +310,12 @@ export default function LegalSettingsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Configuración Legal</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-3xl font-bold">Configuración Legal</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
             Parámetros del Código Sustantivo del Trabajo Colombia - Resolución 2466 de 2025
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => fetchConfiguracion()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Restaurar
@@ -328,7 +328,7 @@ export default function LegalSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-flex">
           <TabsTrigger value="jornada" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Jornada</span>
@@ -459,68 +459,30 @@ export default function LegalSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-full">
-                        <Moon className="h-5 w-5 text-purple-600" />
+                  {[
+                    { icon: Moon, bg: "bg-purple-100", iconColor: "text-purple-600", label: "Recargo Nocturno", sub: "7pm - 6am (Ley 2466/2025)", field: "porcentajeRecargoNocturno" as const },
+                    { icon: Calendar, bg: "bg-orange-100", iconColor: "text-orange-600", label: "Recargo Dominical/Festivo", sub: "Festivos — diurno", field: "porcentajeRecargoDomFestivo" as const },
+                    { icon: Moon, bg: "bg-red-100", iconColor: "text-red-600", label: "Nocturno + Festivo", sub: "Combinado nocturno y festivo", field: "porcentajeRecargoNocturnoFestivo" as const },
+                  ].map(({ icon: Icon, bg, iconColor, label, sub, field }) => (
+                    <div key={field} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className={`p-2 ${bg} rounded-full shrink-0`}>
+                        <Icon className={`h-4 w-4 ${iconColor}`} />
                       </div>
-                      <div>
-                        <p className="font-medium">Recargo Nocturno</p>
-                        <p className="text-sm text-muted-foreground">7pm - 6am (Ley 2466/2025)</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm leading-tight">{label}</p>
+                        <p className="text-xs text-muted-foreground">{sub}</p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeRecargoNocturno}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeRecargoNocturno: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-100 rounded-full">
-                        <Calendar className="h-5 w-5 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Recargo Dominical/Festivo</p>
-                        <p className="text-sm text-muted-foreground">Trabajo en días festivos (diurno)</p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Input
+                          type="number"
+                          value={configuracion[field]}
+                          onChange={(e) => setConfiguracion({ ...configuracion, [field]: parseInt(e.target.value) })}
+                          className="w-16 text-right font-bold h-9"
+                        />
+                        <span className="font-bold">%</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeRecargoDomFestivo}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeRecargoDomFestivo: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-full">
-                        <Moon className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Nocturno + Festivo</p>
-                        <p className="text-sm text-muted-foreground">Combinado nocturno y festivo</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeRecargoNocturnoFestivo}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeRecargoNocturnoFestivo: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 <Separator />
@@ -673,90 +635,32 @@ export default function LegalSettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 rounded-full">
-                        <Sun className="h-5 w-5 text-yellow-600" />
+                <div className="space-y-3">
+                  {[
+                    { icon: Sun,  bg: "bg-yellow-100", iconColor: "text-yellow-600", label: "Extra Diurna Ordinaria",  sub: "Lun–Sáb, 6am–7pm",    field: "porcentajeExtraDiurna" as const },
+                    { icon: Moon, bg: "bg-purple-100", iconColor: "text-purple-600", label: "Extra Nocturna Ordinaria", sub: "Lun–Sáb, 7pm–6am",    field: "porcentajeExtraNocturna" as const },
+                    { icon: Sun,  bg: "bg-orange-100", iconColor: "text-orange-600", label: "Extra Diurna Festiva",    sub: "Dom/Fest, 6am–7pm",   field: "porcentajeExtraDiurnaFestiva" as const },
+                    { icon: Moon, bg: "bg-red-100",    iconColor: "text-red-600",    label: "Extra Nocturna Festiva",  sub: "Dom/Fest, 7pm–6am",   field: "porcentajeExtraNocturnaFestiva" as const },
+                  ].map(({ icon: Icon, bg, iconColor, label, sub, field }) => (
+                    <div key={field} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className={`p-2 ${bg} rounded-full shrink-0`}>
+                        <Icon className={`h-4 w-4 ${iconColor}`} />
                       </div>
-                      <div>
-                        <p className="font-medium">Extra Diurna Ordinaria</p>
-                        <p className="text-sm text-muted-foreground">Lunes a sábado, 6am - 7pm</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm leading-tight">{label}</p>
+                        <p className="text-xs text-muted-foreground">{sub}</p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeExtraDiurna}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeExtraDiurna: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-full">
-                        <Moon className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Extra Nocturna Ordinaria</p>
-                        <p className="text-sm text-muted-foreground">Lunes a sábado, 7pm - 6am</p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Input
+                          type="number"
+                          value={configuracion[field]}
+                          onChange={(e) => setConfiguracion({ ...configuracion, [field]: parseInt(e.target.value) })}
+                          className="w-16 text-right font-bold h-9"
+                        />
+                        <span className="font-bold">%</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeExtraNocturna}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeExtraNocturna: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-100 rounded-full">
-                        <Sun className="h-5 w-5 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Extra Diurna Festiva</p>
-                        <p className="text-sm text-muted-foreground">Domingos/Festivos, 6am - 7pm</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeExtraDiurnaFestiva}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeExtraDiurnaFestiva: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-full">
-                        <Moon className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Extra Nocturna Festiva</p>
-                        <p className="text-sm text-muted-foreground">Domingos/Festivos, 7pm - 6am</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={configuracion.porcentajeExtraNocturnaFestiva}
-                        onChange={(e) => setConfiguracion({ ...configuracion, porcentajeExtraNocturnaFestiva: parseInt(e.target.value) })}
-                        className="w-20 text-right font-bold"
-                      />
-                      <span className="text-lg font-bold">%</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -793,7 +697,7 @@ export default function LegalSettingsPage() {
         <TabsContent value="turnos" className="space-y-6">
           <Card>
             <CardHeader className="bg-green-50 dark:bg-green-950">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
                     <Briefcase className="h-5 w-5" />
@@ -803,7 +707,7 @@ export default function LegalSettingsPage() {
                     Configura los turnos disponibles para programación (Día, Noche, 24h, etc.)
                   </CardDescription>
                 </div>
-                <Button onClick={agregarConceptoTurno} className="bg-green-600 hover:bg-green-700">
+                <Button onClick={agregarConceptoTurno} className="bg-green-600 hover:bg-green-700 self-start shrink-0">
                   <Plus className="mr-2 h-4 w-4" />
                   Agregar Turno
                 </Button>
@@ -821,25 +725,25 @@ export default function LegalSettingsPage() {
 
                 {conceptosTurno.map((concepto, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shrink-0"
                           style={{ backgroundColor: concepto.color }}
                         >
                           {concepto.codigo.charAt(0)}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{concepto.nombre}</p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-sm">{concepto.nombre}</p>
                             <Badge variant="outline" className="uppercase text-[10px] tracking-[0.2em]">
-                              {concepto.tipoTurno === "DIURNO" ? "Día" : concepto.tipoTurno === "NOCTURNO" ? "Noche" : concepto.tipoTurno === "24H" ? "24h" : "Personalizado"}
+                              {concepto.tipoTurno === "DIURNO" ? "Día" : concepto.tipoTurno === "NOCTURNO" ? "Noche" : concepto.tipoTurno === "24H" ? "24h" : "Custom"}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">Código: {concepto.codigo}</p>
+                          <p className="text-xs text-muted-foreground">Código: {concepto.codigo}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <Switch
                           checked={concepto.estaActivo}
                           onCheckedChange={(checked) => actualizarConcepto(index, 'estaActivo', checked)}
@@ -848,14 +752,14 @@ export default function LegalSettingsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => eliminarConcepto(index)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 h-8 w-8"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                       <div className="space-y-2">
                         <Label className="text-xs">Tipo de Turno</Label>
                         <Select value={concepto.tipoTurno} onValueChange={(value) => actualizarConcepto(index, 'tipoTurno', value)}>
