@@ -167,12 +167,35 @@ export default function LoginAuxiliarPage() {
               </Button>
             </form>
 
-            <p className="mt-5 text-center text-xs text-gray-500">
-              ¿Eres administrador?{" "}
-              <Link href="/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                Acceso Administrador →
+            <div className="mt-5 p-3.5 bg-emerald-50 rounded-xl border border-emerald-100">
+              <p className="text-center text-emerald-800 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                Credenciales de Demo
+              </p>
+              <p className="text-center text-xs text-gray-600">
+                <span className="text-emerald-600 font-medium">Email:</span> auxiliar1@demo.com
+                {" · "}
+                <span className="text-emerald-600 font-medium">Contraseña:</span> auxiliar123
+              </p>
+              <p className="text-center text-xs text-gray-600 mt-1">
+                <span className="text-emerald-600 font-medium">Email 2:</span> auxiliar2@demo.com
+                {" · "}
+                <span className="text-emerald-600 font-medium">Contraseña 2:</span> auxiliar456
+              </p>
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs text-gray-500">
+              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                Acceso Administrador
               </Link>
-            </p>
+              <span className="hidden sm:inline">·</span>
+              <Link href="/login-liquidador" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                Acceso Liquidador
+              </Link>
+              <span className="hidden sm:inline">·</span>
+              <Link href="/login-visualizador" className="text-purple-600 hover:text-purple-700 font-medium">
+                Acceso Visualizador
+              </Link>
+            </div>
           </div>
         </div>
       </div>

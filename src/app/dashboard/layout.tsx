@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Header } from "@/components/layout/Header"
 import { SessionGuard } from "@/components/layout/SessionGuard"
+import { useSession } from "next-auth/react"
 
 export default function DashboardLayout({
   children,
@@ -11,6 +13,30 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { data: session, status } = useSession()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (status !== "authenticated") return
+    const role = (session?.user as any)?.role
+    const path = window.location.pathname
+    const isAdmin = role === "SUPER_ADMIN" || role === "ADMINISTRADOR"
+    if (!isAdmin) {
+      if (role === "LIQUIDADOR" && !path.startsWith("/dashboard/liquidador")) {
+        window.location.href = "/dashboard/liquidador"
+      } else if (role === "VISUALIZADOR" && !path.startsWith("/dashboard/visualizador")) {
+        window.location.href = "/dashboard/visualizador"
+      }
+    }
+  }, [status, session])
+
+  const isRoleSpecific = pathname.startsWith("/dashboard/visualizador") || pathname.startsWith("/dashboard/liquidador")
+
+  // Role-specific routes (visualizador, liquidador) have their own layout (sidebar, header, guard)
+  // so the parent layout should only render children for them
+  if (isRoleSpecific) {
+    return <SessionGuard>{children}</SessionGuard>
+  }
 
   return (
     <SessionGuard>

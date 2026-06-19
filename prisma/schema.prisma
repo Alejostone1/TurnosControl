@@ -26,7 +26,7 @@ model Empresa {
   nit         String?       // NIT o identificación fiscal
   correo      String?       @unique
   telefono    String?
-  direccion   Json?         // { "ciudad": "Bogotá", "direccion": "Calle 123" }
+  direccion   Json?         // { "ciudad": "Pereira", "direccion": "Calle 123" }
   estado      EstadoEmpresa @default(ACTIVA)
 
   // Configuración por defecto de la empresa
@@ -47,6 +47,7 @@ model Empresa {
   sesiones              Sesion[]
   sesionesAuxiliares    SesionAuxiliar[]
   registrosAuditoria    RegistroAuditoria[]
+  supervisionAsignaciones SupervisionAsignacion[]
 
   @@index([slug])
   @@index([estado])
@@ -94,6 +95,7 @@ model Usuario {
   periodosCreados     PeriodoNomina[] @relation("CreadoPorUsuario")
   periodosModificados PeriodoNomina[] @relation("ModificadoPorUsuario")
   empleadosCreados     Empleado[]
+  supervisionAsignaciones SupervisionAsignacion[] @relation("VisualizadorSupervisa")
 
   @@index([empresaId, correo])
   @@index([empresaId, estaActivo])
@@ -180,6 +182,26 @@ model SesionAuxiliar {
   @@index([token])
 
   @@map("sesiones_auxiliares")
+}
+
+/// Asignación de supervisión: vincula un VISUALIZADOR con los LIQUIDADOR/AUXILIAR que supervisa
+model SupervisionAsignacion {
+  id              String   @id @default(cuid())
+  empresaId       String
+  empresa         Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  visualizadorId  String
+  visualizador    Usuario  @relation("VisualizadorSupervisa", fields: [visualizadorId], references: [id], onDelete: Cascade)
+  asignadoId      String   // ID del LIQUIDADOR (Usuario) o AUXILIAR supervisado
+  tipoAsignado    String   // "LIQUIDADOR" o "AUXILIAR"
+  creadoPor       String?
+  creadoEn        DateTime @default(now())
+
+  @@unique([visualizadorId, asignadoId])
+  @@index([visualizadorId])
+  @@index([asignadoId])
+  @@index([empresaId])
+
+  @@map("supervision_asignaciones")
 }
 
 // ============================================================
@@ -478,6 +500,16 @@ model AsignacionTurno {
   // Descuento de alimentación individual (null = heredar del período; 0 = sin descuento; >0 = minutos)
   minutosAlimentacion Int?
 
+  // ===== FLUJO DE APROBACIÓN =====
+  estado          EstadoTurno @default(PENDIENTE)
+  observacionRevision String? // Comentario del visualizador al aprobar/rechazar
+  liquidadoPor    String?     // ID del usuario LIQUIDADOR que liquidó
+  revisadoPor     String?     // ID del usuario VISUALIZADOR que revisó
+  aprobadoPor     String?     // ID del usuario (Admin o Visualizador) que aprobó
+  liquidadoEn     DateTime?
+  revisadoEn      DateTime?
+  aprobadoEn      DateTime?
+
   // Metadatos
   observaciones String?
   creadoPor     String?
@@ -494,6 +526,15 @@ model AsignacionTurno {
   @@index([novedadId])
 
   @@map("asignaciones_turno")
+}
+
+enum EstadoTurno {
+  PENDIENTE    // Creado, pendiente de programación
+  PROGRAMADO   // Programado, pendiente de liquidación
+  LIQUIDADO    // Liquidado por LIQUIDADOR
+  EN_REVISION  // En revisión por VISUALIZADOR
+  APROBADO     // Aprobado
+  RECHAZADO    // Rechazado
 }
 
 // ============================================================
@@ -526,6 +567,11 @@ model PeriodoNomina {
   // Estado del período
   estadoPeriodo EstadoPeriodo @default(BORRADOR)
   cerradoEn     DateTime?     // Fecha en que se cerró/bloqueó
+
+  // ===== FLUJO DE APROBACIÓN =====
+  aprobadoPor    String?     // ID del usuario que aprobó
+  aprobadoEn     DateTime?
+  observacionCierre String?  // Comentario al cerrar/aprobar
 
   // Cálculo
   calculadoEn   DateTime?
@@ -563,7 +609,9 @@ enum EstadoPeriodo {
   BORRADOR    // Editable, en construcción
   PENDIENTE   // Pendiente de revisión/aprobación
   CALCULADO   // Calculado, listo para revisión
-  APROBADO    // Aprobado por RRHH
+  EN_REVISION // En revisión por VISUALIZADOR
+  APROBADO    // Aprobado por RRHH/Visualizador
+  RECHAZADO   // Rechazado, requiere correcciones
   CERRADO     // Bloqueado, no editable
   ARCHIVADO   // Archivado para historial
 }

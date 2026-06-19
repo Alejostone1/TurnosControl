@@ -2,17 +2,15 @@
  * SEED — Sistema de Nómina y Control de Turnos
  * Cubre todos los modelos del schema: Empresa, Usuario, Auxiliar,
  * ConfiguracionLegal, ConceptoNomina, Empleado, ConfiguracionEmpleado,
- * PeriodoNomina, EmpleadoPeriodo, AsignacionTurno, RegistroDiaTrabajado,
- * ResultadoNomina, RegistroAuditoria.
+ * RegistroAuditoria.
  *
  * Datos generados:
- *  - 2 usuarios (SUPER_ADMIN + LIQUIDADOR)
- *  - 2 auxiliares
- *  - 8 empleados en distintos centros/programas
+ *  - 4 usuarios (2 ADMINISTRADOR + 1 LIQUIDADOR + 1 VISUALIZADOR)
+ *  - 4 auxiliares (2 por cada administrador)
+ *  - 12 empleados (3 por cada auxiliar)
  *  - Configuraciones personalizadas para 3 empleados
- *  - Período abril/2026 → CERRADO (turnos completos + RegistroDiaTrabajado + ResultadoNomina)
- *  - Período mayo/2026  → BORRADOR (turnos parciales días 1-13, listo para calcular)
- *  - 5 registros de auditoría representativos
+ *  - Sin períodos de nómina ni programaciones de turnos
+ *  - 3 registros de auditoría representativos
  */
 
 import {
@@ -30,6 +28,7 @@ import {
   TipoPeriodo,
   EstadoPeriodo,
   EstadoAsignacion,
+  EstadoTurno,
   AccionAuditoria,
   SeveridadAuditoria,
 } from '@prisma/client'
@@ -41,8 +40,8 @@ const prisma = new PrismaClient()
 // CONSTANTES
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SMMLV         = 1_423_500
-const AUX_TRANSPORTE = 200_000
+const SMMLV         = 1_750_905
+const AUX_TRANSPORTE = 249_000
 const TOPE_SEMANAL  = 44
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +82,7 @@ const FESTIVOS_2026 = new Set([
   '2026-06-15', // Corpus Christi (trasladado)
   '2026-06-22', // Sagrado Corazón (trasladado)
   '2026-06-29', // San Pedro y San Pablo (trasladado)
+  '2026-07-13', // día virge chinquinquirá
   '2026-07-20', // Independencia de Colombia
   '2026-08-07', // Batalla de Boyacá
   '2026-08-17', // Asunción de la Virgen (trasladado)
@@ -343,25 +343,43 @@ async function main() {
   // 2. USUARIOS
   // ══════════════════════════════════════════════════════════════════════════
 
-  const [passAdmin, passLiq, passVis] = await Promise.all([
+  const [passAdmin1, passAdmin2, passLiq, passVis] = await Promise.all([
     bcrypt.hash('admin123',      10),
+    bcrypt.hash('admin456',      10),
     bcrypt.hash('liquidador123', 10),
     bcrypt.hash('visor123',      10),
   ])
 
-  const admin = await prisma.usuario.upsert({
-    where: { correo: 'admin@demo.com' },
+  const admin1 = await prisma.usuario.upsert({
+    where: { correo: 'admin1@demo.com' },
     update: {},
     create: {
-      correo:    'admin@demo.com',
-      contrasena: passAdmin,
-      nombres:   'Administrador',
-      apellidos: 'Sistema',
+      correo:    'admin1@demo.com',
+      contrasena: passAdmin1,
+      nombres:   'Carlos',
+      apellidos: 'Mendoza López',
       documento: '1000000001',
       telefono:  '+57 300 1234567',
       empresaId: empresa.id,
-      rol:       RolUsuario.SUPER_ADMIN,
+      rol:       RolUsuario.ADMINISTRADOR,
       estaActivo: true,
+    },
+  })
+
+  const admin2 = await prisma.usuario.upsert({
+    where: { correo: 'admin2@demo.com' },
+    update: {},
+    create: {
+      correo:    'admin2@demo.com',
+      contrasena: passAdmin2,
+      nombres:   'María',
+      apellidos: 'Fernández García',
+      documento: '1000000002',
+      telefono:  '+57 300 7654321',
+      empresaId: empresa.id,
+      rol:       RolUsuario.ADMINISTRADOR,
+      estaActivo: true,
+      creadoPor: admin1.id,
     },
   })
 
@@ -373,11 +391,12 @@ async function main() {
       contrasena: passLiq,
       nombres:   'Patricia',
       apellidos: 'Londoño Ruiz',
-      documento: '1000000002',
-      telefono:  '+57 300 7654321',
+      documento: '1000000003',
+      telefono:  '+57 300 1111222',
       empresaId: empresa.id,
       rol:       RolUsuario.LIQUIDADOR,
       estaActivo: true,
+      creadoPor: admin1.id,
     },
   })
 
@@ -389,22 +408,25 @@ async function main() {
       contrasena: passVis,
       nombres:   'Andrés',
       apellidos: 'Ramírez Castro',
-      documento: '1000000003',
-      telefono:  '+57 300 1111222',
+      documento: '1000000004',
+      telefono:  '+57 300 3334444',
       empresaId: empresa.id,
       rol:       RolUsuario.VISUALIZADOR,
       estaActivo: true,
+      creadoPor: admin1.id,
     },
   })
-  console.log('✅ Usuarios: admin@demo.com, liquidador@demo.com, visor@demo.com')
+  console.log('✅ Usuarios: admin1@demo.com, admin2@demo.com, liquidador@demo.com, visor@demo.com')
 
   // ══════════════════════════════════════════════════════════════════════════
   // 3. AUXILIARES
   // ══════════════════════════════════════════════════════════════════════════
 
-  const [passAux1, passAux2] = await Promise.all([
+  const [passAux1, passAux2, passAux3, passAux4] = await Promise.all([
     bcrypt.hash('auxiliar123', 10),
     bcrypt.hash('auxiliar456', 10),
+    bcrypt.hash('auxiliar789', 10),
+    bcrypt.hash('auxiliar000', 10),
   ])
 
   const aux1 = await prisma.auxiliar.upsert({
@@ -419,6 +441,7 @@ async function main() {
       telefono:  '+57 300 1111111',
       empresaId: empresa.id,
       estaActivo: true,
+      creadoPor: admin1.id,
     },
   })
 
@@ -434,9 +457,42 @@ async function main() {
       telefono:  '+57 300 2222222',
       empresaId: empresa.id,
       estaActivo: true,
+      creadoPor: admin1.id,
     },
   })
-  console.log('✅ Auxiliares: auxiliar1@demo.com, auxiliar2@demo.com')
+
+  const aux3 = await prisma.auxiliar.upsert({
+    where: { correo: 'auxiliar3@demo.com' },
+    update: {},
+    create: {
+      correo:    'auxiliar3@demo.com',
+      contrasena: passAux3,
+      nombres:   'Diego',
+      apellidos: 'Sánchez Torres',
+      documento: '2000000003',
+      telefono:  '+57 300 3333333',
+      empresaId: empresa.id,
+      estaActivo: true,
+      creadoPor: admin2.id,
+    },
+  })
+
+  const aux4 = await prisma.auxiliar.upsert({
+    where: { correo: 'auxiliar4@demo.com' },
+    update: {},
+    create: {
+      correo:    'auxiliar4@demo.com',
+      contrasena: passAux4,
+      nombres:   'Valentina',
+      apellidos: 'Morales Ríos',
+      documento: '2000000004',
+      telefono:  '+57 300 4444444',
+      empresaId: empresa.id,
+      estaActivo: true,
+      creadoPor: admin2.id,
+    },
+  })
+  console.log('✅ Auxiliares: auxiliar1@demo.com, auxiliar2@demo.com, auxiliar3@demo.com, auxiliar4@demo.com')
 
   // ══════════════════════════════════════════════════════════════════════════
   // 4. CONFIGURACIÓN LEGAL (CST Colombia 2026)
@@ -473,7 +529,7 @@ async function main() {
       formulaValorHora:       'SALARIO_MENSUAL / 220',
       tipoCalculoHorasExtras: TipoCalculoHorasExtras.SEMANAL,
       vigenciaDesde: new Date('2026-01-01T00:00:00Z'),
-      creadoPor:     admin.id,
+      creadoPor:     admin1.id,
     },
   })
   console.log(`✅ Config legal: ${configLegal.nombre}`)
@@ -607,7 +663,7 @@ async function main() {
       update: { nombre: c.nombre, color: c.color, icono: c.icono, orden: c.orden },
       create: {
         empresaId:  empresa.id,
-        creadoPor:  admin.id,
+        creadoPor:  admin1.id,
         estaActivo: true,
         ...(c as any),
       },
@@ -625,18 +681,29 @@ async function main() {
     cc: string; prog: string; mod: string; cargo: string
     salario: number; auxilio: boolean
     vinc: TipoVinculacion; contrato: TipoContrato; horas: number
-    creador: 'admin' | 'aux1' | 'aux2'
+    creador: 'aux1' | 'aux2' | 'aux3' | 'aux4'
   }
 
   const empleadosDef: EmpDef[] = [
-    { doc:'10000001', nombres:'Juan',     apellidos:'Pérez González',    cc:'400013', prog:'Creeme',            mod:'Centro Internamiento Preventivo',         cargo:'Educador',           salario:1_750_905, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'admin' },
+    // ── Auxiliar 1 (Pedro Gómez) — 3 empleados ──
+    { doc:'10000001', nombres:'Juan',     apellidos:'Pérez González',    cc:'400013', prog:'Creeme',            mod:'Centro Internamiento Preventivo',         cargo:'Educador',           salario:1_750_905, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux1' },
     { doc:'10000002', nombres:'María',    apellidos:'Rodríguez López',   cc:'400013', prog:'Creeme',            mod:'Centro Atencion Especializada',            cargo:'Psicóloga',          salario:2_500_000, auxilio:false, vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux1' },
-    { doc:'10000003', nombres:'Carlos',   apellidos:'Martínez Sánchez',  cc:'40004',  prog:'Arcoiris',          mod:'Internado',                                cargo:'Trabajador Social',  salario:1_750_905, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_FIJO,      horas:44, creador:'aux2' },
-    { doc:'10000004', nombres:'Ana',      apellidos:'García Torres',     cc:'400012', prog:'Genesis',           mod:'Internacion Medio Semicerrado',            cargo:'Nutricionista',      salario:1_950_000, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux1' },
+    { doc:'10000003', nombres:'Carlos',   apellidos:'Martínez Sánchez',  cc:'40004',  prog:'Arcoiris',          mod:'Internado',                                cargo:'Trabajador Social',  salario:1_750_905, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_FIJO,      horas:44, creador:'aux1' },
+
+    // ── Auxiliar 2 (Laura Martínez) — 3 empleados ──
+    { doc:'10000004', nombres:'Ana',      apellidos:'García Torres',     cc:'400012', prog:'Genesis',           mod:'Internacion Medio Semicerrado',            cargo:'Nutricionista',      salario:1_950_000, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux2' },
     { doc:'10000005', nombres:'Luis',     apellidos:'Hernández Díaz',    cc:'400012', prog:'Vientos de Cambio', mod:'Restablecimiento Administracion Justicia', cargo:'Coordinador',        salario:2_200_000, auxilio:false, vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux2' },
-    { doc:'10000006', nombres:'Sofía',    apellidos:'Vargas Castillo',   cc:'400013', prog:'Creeme',            mod:'Centro Internamiento Preventivo',          cargo:'Enfermera',          salario:1_800_000, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'admin' },
-    { doc:'10000007', nombres:'Diego',    apellidos:'Morales Ruiz',      cc:'40004',  prog:'Arcoiris',          mod:'Internado',                                cargo:'Educador',           salario:1_423_500, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_FIJO,      horas:44, creador:'aux1' },
-    { doc:'10000008', nombres:'Isabella', apellidos:'Reyes Mendoza',     cc:'400012', prog:'Genesis',           mod:'Internacion Medio Semicerrado',            cargo:'Trabajadora Social', salario:1_750_905, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux2' },
+    { doc:'10000006', nombres:'Sofía',    apellidos:'Vargas Castillo',   cc:'400013', prog:'Creeme',            mod:'Centro Internamiento Preventivo',          cargo:'Enfermera',          salario:1_800_000, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux2' },
+
+    // ── Auxiliar 3 (Diego Sánchez) — 3 empleados ──
+    { doc:'10000007', nombres:'Diego',    apellidos:'Morales Ruiz',      cc:'40004',  prog:'Arcoiris',          mod:'Internado',                                cargo:'Educador',           salario:1_423_500, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_FIJO,      horas:44, creador:'aux3' },
+    { doc:'10000008', nombres:'Isabella', apellidos:'Reyes Mendoza',     cc:'400012', prog:'Genesis',           mod:'Internacion Medio Semicerrado',            cargo:'Trabajadora Social', salario:1_750_905, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux3' },
+    { doc:'10000009', nombres:'Santiago', apellidos:'Torres Ramírez',    cc:'400013', prog:'Creeme',            mod:'Centro Atencion Especializada',            cargo:'Terapeuta Ocupacional', salario:2_100_000, auxilio:true, vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux3' },
+
+    // ── Auxiliar 4 (Valentina Morales) — 3 empleados ──
+    { doc:'10000010', nombres:'Valentina', apellidos:'Morales Ríos',     cc:'40004',  prog:'Arcoiris',          mod:'Internado',                                cargo:'Psicopedagoga',      salario:1_950_000, auxilio:true,  vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux4' },
+    { doc:'10000011', nombres:'Mateo',    apellidos:'Vargas Castillo',   cc:'400012', prog:'Vientos de Cambio', mod:'Restablecimiento Administracion Justicia', cargo:'Auxiliar Administrativo', salario:1_423_500, auxilio:true, vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux4' },
+    { doc:'10000012', nombres:'Camila',   apellidos:'Ríos Romero',       cc:'400013', prog:'Creeme',            mod:'Centro Internamiento Preventivo',          cargo:'Enfermera Jefe',     salario:2_300_000, auxilio:false, vinc:TipoVinculacion.TIEMPO_COMPLETO, contrato:TipoContrato.TERMINO_INDEFINIDO, horas:44, creador:'aux4' },
   ]
 
   type EmpRecord = { id: string; salario: number; auxilio: boolean }
@@ -661,9 +728,10 @@ async function main() {
       horasSemanales:  e.horas,
       estaActivo:      true,
     }
-    if (e.creador === 'admin') data.creadoPorUsuarioId  = admin.id
-    if (e.creador === 'aux1') data.creadoPorAuxiliarId  = aux1.id
-    if (e.creador === 'aux2') data.creadoPorAuxiliarId  = aux2.id
+    if (e.creador === 'aux1') data.creadoPorAuxiliarId = aux1.id
+    if (e.creador === 'aux2') data.creadoPorAuxiliarId = aux2.id
+    if (e.creador === 'aux3') data.creadoPorAuxiliarId = aux3.id
+    if (e.creador === 'aux4') data.creadoPorAuxiliarId = aux4.id
 
     const rec = await prisma.empleado.upsert({
       where: { empresaId_numeroDocumento: { empresaId: empresa.id, numeroDocumento: e.doc } },
@@ -680,7 +748,7 @@ async function main() {
   // 7. CONFIGURACIÓN POR EMPLEADO
   // ══════════════════════════════════════════════════════════════════════════
 
-  // Luis: coordinador, autorizado horas extras
+  // Luis (10000005): coordinador, autorizado horas extras
   await prisma.configuracionEmpleado.upsert({
     where: { empleadoId: empMap['10000005'].id },
     update: {},
@@ -696,7 +764,7 @@ async function main() {
     },
   })
 
-  // Sofía: enfermera nocturna, autorizada turno nocturno y extras
+  // Sofía (10000006): enfermera nocturna, autorizada turno nocturno y extras
   await prisma.configuracionEmpleado.upsert({
     where: { empleadoId: empMap['10000006'].id },
     update: {},
@@ -713,12 +781,12 @@ async function main() {
     },
   })
 
-  // Carlos: trabajador social, sin autorización de horas extras
+  // Santiago (10000009): terapeuta ocupacional, sin autorización de horas extras
   await prisma.configuracionEmpleado.upsert({
-    where: { empleadoId: empMap['10000003'].id },
+    where: { empleadoId: empMap['10000009'].id },
     update: {},
     create: {
-      empleadoId:    empMap['10000003'].id,
+      empleadoId:    empMap['10000009'].id,
       empresaId:     empresa.id,
       autorizadoHorasExtras:   false,
       autorizadoTurnoNocturno: true,
@@ -730,243 +798,14 @@ async function main() {
   console.log('✅ Configuraciones por empleado (3)')
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 8. PERÍODOS DE NÓMINA
-  // ══════════════════════════════════════════════════════════════════════════
-
-  const periodoAbril = await prisma.periodoNomina.upsert({
-    where: {
-      empresaId_nombrePeriodo_fechaInicio: {
-        empresaId:    empresa.id,
-        nombrePeriodo: 'abril de 2026',
-        fechaInicio:   dt(2026, 4, 1),
-      },
-    },
-    update: {},
-    create: {
-      empresaId:             empresa.id,
-      nombrePeriodo:         'abril de 2026',
-      tipoPeriodo:           TipoPeriodo.MENSUAL,
-      tipoCalculoHorasExtras: TipoCalculoHorasExtras.SEMANAL,
-      fechaInicio:           dt(2026, 4, 1),
-      fechaFin:              dt(2026, 4, 30),
-      fechaCorte:            dt(2026, 4, 30),
-      configuracionLegalId:  configLegal.id,
-      estadoPeriodo:         EstadoPeriodo.BORRADOR,
-      creadoPor:             admin.id,
-    },
-  })
-
-  const periodoMayo = await prisma.periodoNomina.upsert({
-    where: {
-      empresaId_nombrePeriodo_fechaInicio: {
-        empresaId:    empresa.id,
-        nombrePeriodo: 'mayo de 2026',
-        fechaInicio:   dt(2026, 5, 1),
-      },
-    },
-    update: {},
-    create: {
-      empresaId:             empresa.id,
-      nombrePeriodo:         'mayo de 2026',
-      tipoPeriodo:           TipoPeriodo.MENSUAL,
-      tipoCalculoHorasExtras: TipoCalculoHorasExtras.SEMANAL,
-      fechaInicio:           dt(2026, 5, 1),
-      fechaFin:              dt(2026, 5, 31),
-      fechaCorte:            dt(2026, 5, 31),
-      configuracionLegalId:  configLegal.id,
-      estadoPeriodo:         EstadoPeriodo.BORRADOR,
-      creadoPor:             admin.id,
-    },
-  })
-  console.log('✅ Períodos: abril/2026, mayo/2026')
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 9. EMPLEADO-PERÍODO
-  // ══════════════════════════════════════════════════════════════════════════
-
-  await prisma.empleadoPeriodo.createMany({
-    data: empIds.flatMap(eid => [
-      { empleadoId: eid, periodoId: periodoAbril.id, estadoAsignacion: EstadoAsignacion.ACTIVO, creadoPor: admin.id },
-      { empleadoId: eid, periodoId: periodoMayo.id,  estadoAsignacion: EstadoAsignacion.ACTIVO, creadoPor: admin.id },
-    ]),
-    skipDuplicates: true,
-  })
-  console.log(`✅ ${empIds.length * 2} asignaciones empleado-período`)
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 10. TURNOS ABRIL + REGISTROS DÍA CALCULADOS
-  //
-  // Horarios por empleado:
-  //  Juan     (10000001): D Lun-Sáb (incluyendo festivos)
-  //  María    (10000002): D Lun-Vie
-  //  Carlos   (10000003): D Lun-Mié | N Jue-Sáb
-  //  Ana      (10000004): D Lun-Vie
-  //  Luis     (10000005): 24T cada 4 días (1, 5, 9, 13, 17, 21, 25, 29)
-  //  Sofía    (10000006): N Lun-Sáb
-  //  Diego    (10000007): D Lun-Sáb
-  //  Isabella (10000008): 24T cada 3 días (1, 4, 7, 10, 13, 16, 19, 22, 25, 28)
-  // ══════════════════════════════════════════════════════════════════════════
-
-  type ScheduleFn = (date: Date) => string | null
-  const schedules: Record<string, ScheduleFn> = {
-    '10000001': (d) => dowUTC(d) === 0 ? null : 'D',
-    '10000002': (d) => [0, 6].includes(dowUTC(d)) ? null : 'D',
-    '10000003': (d) => {
-      const w = dowUTC(d)
-      if (w === 0) return null
-      return w <= 3 ? 'D' : 'N'
-    },
-    '10000004': (d) => [0, 6].includes(dowUTC(d)) ? null : 'D',
-    '10000005': (d) => (d.getUTCDate() - 1) % 4 === 0 ? '24T' : null,
-    '10000006': (d) => dowUTC(d) === 0 ? null : 'N',
-    '10000007': (d) => dowUTC(d) === 0 ? null : 'D',
-    '10000008': (d) => (d.getUTCDate() - 1) % 3 === 0 ? '24T' : null,
-  }
-
-  // acumSemana: key = `${empId}_${isoWeek}` → horas acumuladas en esa semana ISO
-  const acumSemana  = new Map<string, number>()
-  const resultAccum = new Map<string, RAccum>()
-  let totalAbril = 0
-
-  process.stdout.write('⏳ Generando turnos y registros de abril...')
-
-  for (let day = 1; day <= 30; day++) {
-    const fecha = dt(2026, 4, day)
-
-    for (const [docNum, scheduleFn] of Object.entries(schedules)) {
-      const codigo = scheduleFn(fecha)
-      if (!codigo) continue
-
-      const emp     = empMap[docNum]
-      const weekKey = `${emp.id}_${isoWeek(fecha)}`
-      const acum    = acumSemana.get(weekKey) ?? 0
-
-      const asig = await prisma.asignacionTurno.upsert({
-        where: {
-          empresaId_empleadoId_fechaTurno: {
-            empresaId: empresa.id, empleadoId: emp.id, fechaTurno: fecha,
-          },
-        },
-        update: { conceptoId: conceptoMap[codigo] },
-        create: {
-          empresaId:  empresa.id,
-          empleadoId: emp.id,
-          fechaTurno: fecha,
-          conceptoId: conceptoMap[codigo],
-          creadoPor:  admin.id,
-        },
-      })
-      totalAbril++
-
-      const { record, horasGeneradas } = buildDayRecord({
-        empresaId: empresa.id, empleadoId: emp.id,
-        periodoId: periodoAbril.id, asignacionId: asig.id,
-        fecha, codigo, salarioBase: emp.salario, acumSemana: acum,
-      })
-      acumSemana.set(weekKey, acum + horasGeneradas)
-
-      await prisma.registroDiaTrabajado.upsert({
-        where:  { asignacionId: asig.id },
-        update: record,
-        create: record,
-      })
-
-      const ra = resultAccum.get(emp.id) ?? newAccum()
-      addToAccum(ra, record)
-      resultAccum.set(emp.id, ra)
-    }
-  }
-  console.log(` ✅ ${totalAbril} turnos + registros`)
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 11. RESULTADO NÓMINA ABRIL (por empleado)
-  // ══════════════════════════════════════════════════════════════════════════
-
-  let totalResultados = 0
-  for (const [docNum, emp] of Object.entries(empMap)) {
-    const ra = resultAccum.get(emp.id)
-    if (!ra) continue
-
-    const res = buildResultado(
-      empresa.id, emp.id, periodoAbril.id,
-      emp.salario, emp.auxilio, liquidador.id, ra
-    )
-    await prisma.resultadoNomina.upsert({
-      where: {
-        empresaId_empleadoId_periodoId: {
-          empresaId: empresa.id, empleadoId: emp.id, periodoId: periodoAbril.id,
-        },
-      },
-      update: res,
-      create: res,
-    })
-    totalResultados++
-  }
-  console.log(`✅ ${totalResultados} resultados de nómina (abril)`)
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 12. CERRAR PERÍODO ABRIL
-  // ══════════════════════════════════════════════════════════════════════════
-
-  await prisma.periodoNomina.update({
-    where: { id: periodoAbril.id },
-    data: {
-      estadoPeriodo: EstadoPeriodo.CERRADO,
-      calculadoEn:   new Date('2026-04-30T17:00:00Z'),
-      calculadoPor:  liquidador.id,
-      cerradoEn:     new Date('2026-04-30T17:30:00Z'),
-    },
-  })
-  console.log('✅ Período abril → CERRADO')
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 13. TURNOS MAYO (parcial: días 1-13)
-  //     Sin RegistroDiaTrabajado — el período está en BORRADOR
-  // ══════════════════════════════════════════════════════════════════════════
-
-  acumSemana.clear()
-  let totalMayo = 0
-
-  process.stdout.write('⏳ Generando turnos mayo (días 1-13)...')
-
-  for (let day = 1; day <= 13; day++) {
-    const fecha = dt(2026, 5, day)
-
-    for (const [docNum, scheduleFn] of Object.entries(schedules)) {
-      const codigo = scheduleFn(fecha)
-      if (!codigo) continue
-
-      const emp = empMap[docNum]
-
-      await prisma.asignacionTurno.upsert({
-        where: {
-          empresaId_empleadoId_fechaTurno: {
-            empresaId: empresa.id, empleadoId: emp.id, fechaTurno: fecha,
-          },
-        },
-        update: { conceptoId: conceptoMap[codigo] },
-        create: {
-          empresaId:  empresa.id,
-          empleadoId: emp.id,
-          fechaTurno: fecha,
-          conceptoId: conceptoMap[codigo],
-          creadoPor:  aux1.id,
-        },
-      })
-      totalMayo++
-    }
-  }
-  console.log(` ✅ ${totalMayo} turnos`)
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 14. REGISTROS DE AUDITORÍA
+  // 8. REGISTROS DE AUDITORÍA
   // ══════════════════════════════════════════════════════════════════════════
 
   await prisma.registroAuditoria.createMany({
     data: [
       {
         empresaId:  empresa.id,
-        usuarioId:  admin.id,
+        usuarioId:  admin1.id,
         accion:     AccionAuditoria.CONFIGURAR,
         modulo:     'CONFIGURACION',
         entidad:    'ConfiguracionLegal',
@@ -977,66 +816,31 @@ async function main() {
       },
       {
         empresaId:  empresa.id,
-        usuarioId:  admin.id,
+        usuarioId:  admin1.id,
         accion:     AccionAuditoria.CREAR,
         modulo:     'EMPLEADOS',
         entidad:    'Empleado',
         entidadId:  empIds[0],
         descripcion: `Creación inicial de ${empIds.length} empleados (seed)`,
-        accionDetallada: `Carga masiva de empleados al inicializar el sistema`,
+        accionDetallada: `Carga masiva de 12 empleados al inicializar el sistema`,
         severidad:  SeveridadAuditoria.INFO,
         esMasiva:   true,
       },
       {
         empresaId:  empresa.id,
-        auxiliarId: aux1.id,
-        accion:     AccionAuditoria.ASIGNAR,
-        modulo:     'TURNOS',
-        entidad:    'AsignacionTurno',
-        entidadId:  `BATCH-ABRIL-SEED`,
-        descripcion: `Programación de turnos: abril de 2026 (${totalAbril} turnos)`,
-        accionDetallada: `Turnos completos para los 8 empleados durante todo el mes de abril`,
+        usuarioId:  admin1.id,
+        accion:     AccionAuditoria.CREAR,
+        modulo:     'SEGURIDAD',
+        entidad:    'Usuario',
+        entidadId:  admin2.id,
+        descripcion: `Creación de administrador: ${admin2.nombres} ${admin2.apellidos}`,
+        accionDetallada: `Segundo administrador creado desde el seed`,
         severidad:  SeveridadAuditoria.INFO,
-        esMasiva:   true,
-      },
-      {
-        empresaId:  empresa.id,
-        usuarioId:  liquidador.id,
-        accion:     AccionAuditoria.CALCULAR,
-        modulo:     'NOMINA',
-        entidad:    'PeriodoNomina',
-        entidadId:  periodoAbril.id,
-        descripcion: 'Nómina calculada: abril de 2026',
-        accionDetallada: `Cálculo sincrónico — ${empIds.length} empleados, ${totalAbril} turnos procesados`,
-        severidad:  SeveridadAuditoria.ALTO,
-      },
-      {
-        empresaId:  empresa.id,
-        usuarioId:  admin.id,
-        accion:     AccionAuditoria.CERRAR,
-        modulo:     'NOMINA',
-        entidad:    'PeriodoNomina',
-        entidadId:  periodoAbril.id,
-        descripcion: 'Cierre de período: abril de 2026',
-        accionDetallada: 'Período revisado por RRHH y cerrado. No se permiten modificaciones.',
-        severidad:  SeveridadAuditoria.ALTO,
-      },
-      {
-        empresaId:  empresa.id,
-        auxiliarId: aux2.id,
-        accion:     AccionAuditoria.ASIGNAR,
-        modulo:     'TURNOS',
-        entidad:    'AsignacionTurno',
-        entidadId:  `BATCH-MAYO-SEED`,
-        descripcion: `Programación parcial mayo 2026 — días 1-13 (${totalMayo} turnos)`,
-        accionDetallada: 'Turnos cargados para los primeros 13 días del mes. Pendiente completar.',
-        severidad:  SeveridadAuditoria.INFO,
-        esMasiva:   true,
       },
     ],
     skipDuplicates: false,
   })
-  console.log('✅ 6 registros de auditoría')
+  console.log('✅ 3 registros de auditoría')
 
   // ══════════════════════════════════════════════════════════════════════════
   // RESUMEN FINAL
@@ -1046,16 +850,18 @@ async function main() {
   console.log('╔══════════════════════════════════════════════════════════╗')
   console.log('║              CREDENCIALES DE ACCESO                     ║')
   console.log('╠══════════════════════════════════════════════════════════╣')
-  console.log('║  SUPER_ADMIN  admin@demo.com          / admin123        ║')
+  console.log('║  ADMIN 1      admin1@demo.com         / admin123        ║')
+  console.log('║  ADMIN 2      admin2@demo.com         / admin456        ║')
   console.log('║  LIQUIDADOR   liquidador@demo.com     / liquidador123   ║')
   console.log('║  VISUALIZADOR visor@demo.com          / visor123        ║')
   console.log('║  AUXILIAR 1   auxiliar1@demo.com      / auxiliar123     ║')
   console.log('║  AUXILIAR 2   auxiliar2@demo.com      / auxiliar456     ║')
+  console.log('║  AUXILIAR 3   auxiliar3@demo.com      / auxiliar789     ║')
+  console.log('║  AUXILIAR 4   auxiliar4@demo.com      / auxiliar000     ║')
   console.log('╠══════════════════════════════════════════════════════════╣')
   console.log('║  Empresa: Empresa Demo S.A.S.  /  NIT: 900123456-7     ║')
-  console.log('║  8 empleados en 3 centros de costo                      ║')
-  console.log('║  Período abril/2026 → CERRADO  (datos calculados)       ║')
-  console.log('║  Período mayo/2026  → BORRADOR (días 1-13 cargados)     ║')
+  console.log('║  12 empleados en 3 centros de costo                    ║')
+  console.log('║  Sin períodos de nómina ni programaciones creadas      ║')
   console.log('╚══════════════════════════════════════════════════════════╝')
 }
 

@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     if (!token) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
     const empresaId = (token as any)?.empresaId
+    const role = (token as any)?.role
+    const userId = (token as any)?.id
     if (!empresaId) return NextResponse.json({ error: "Empresa no encontrada" }, { status: 400 })
 
     const { searchParams } = new URL(request.url)
@@ -21,9 +23,35 @@ export async function GET(request: NextRequest) {
     const centroCosto = searchParams.get("centroCosto")
     const programa    = searchParams.get("programa")
     const modalidad   = searchParams.get("modalidad")
+    const estadoFilter = searchParams.get("estado")
     const limitStr    = searchParams.get("limit")
 
     const whereClause: any = { empresaId }
+
+    // VISUALIZADOR: solo ve turnos de los liquidadores/auxiliares que supervisa
+    if (role === "VISUALIZADOR" && userId) {
+      try {
+        const supervisiones = await prisma.supervisionAsignacion.findMany({
+          where: { visualizadorId: userId },
+          select: { asignadoId: true },
+        })
+        const idsSupervisados = supervisiones.map(s => s.asignadoId)
+        if (idsSupervisados.length > 0) {
+          whereClause.creadoPor = { in: idsSupervisados }
+        } else {
+          // No supervisa a nadie → no ve nada
+          return NextResponse.json([])
+        }
+      } catch {
+        // Supervision table not available yet (migration not run) → return empty
+        return NextResponse.json([])
+      }
+    }
+
+    if (estadoFilter) {
+      const estados = estadoFilter.split(",")
+      whereClause.estado = { in: estados }
+    }
 
     if (startDate && endDate) {
       whereClause.fechaTurno = {
@@ -52,6 +80,7 @@ export async function GET(request: NextRequest) {
       include: {
         concepto: true,
         empleado: { select: { id: true, nombres: true, apellidos: true, numeroDocumento: true, centroCosto: true, programa: true, modalidad: true } },
+        novedad: { select: { id: true, codigo: true, nombre: true, color: true } },
       },
       orderBy: [{ fechaTurno: "desc" }, { empleadoId: "asc" }],
       ...(limitStr ? { take: parseInt(limitStr) } : {}),

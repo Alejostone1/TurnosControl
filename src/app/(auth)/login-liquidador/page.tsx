@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { signIn, getSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,22 +11,21 @@ import {
   Lock,
   Mail,
   ArrowRight,
-  Building2,
+  Calculator,
   Clock,
-  TrendingUp,
-  Sparkles,
+  ClipboardList,
   Eye,
   EyeOff,
   ArrowLeft,
+  Users,
 } from "lucide-react"
 
-export default function LoginPage() {
+export default function LoginLiquidadorPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
-  const router = useRouter()
 
   useEffect(() => { setIsMounted(true) }, [])
 
@@ -41,22 +39,15 @@ export default function LoginPage() {
         return
       }
       const session = await getSession()
-      if ((session?.user as any)?.userType === "auxiliar") {
-        toast.error("Esta pantalla es para administradores. Use el acceso de Auxiliar.")
+      const role = (session?.user as any)?.role
+      if (role !== "LIQUIDADOR") {
+        toast.error("Esta pantalla es exclusiva para Liquidadores.")
         await import("next-auth/react").then(m => m.signOut({ redirect: false }))
         return
       }
       sessionStorage.setItem("turnos_session_active", "1")
-      toast.success("Inicio de sesión exitoso")
-      // Redirect based on role
-      const role = (session?.user as any)?.role
-      if (role === "LIQUIDADOR") {
-        window.location.href = "/dashboard/liquidador"
-      } else if (role === "VISUALIZADOR") {
-        window.location.href = "/dashboard/visualizador"
-      } else {
-        window.location.href = "/dashboard"
-      }
+      toast.success("Bienvenido/a, Liquidador")
+      window.location.href = "/dashboard-auxiliar"
     } catch {
       toast.error("Error al iniciar sesión")
     } finally {
@@ -65,29 +56,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 flex items-center justify-center p-4">
-
-      {/* Card container */}
+    <div className="min-h-screen bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 flex items-center justify-center p-4">
       <div className={cn(
         "w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-700",
         isMounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
       )}>
-        <div className="flex flex-col lg:flex-row min-h-[540px]">
-
-          {/* Left panel — branding, hidden on small screens */}
-          <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-blue-600 to-blue-800 flex-col items-center justify-center p-10 text-white">
+        <div className="flex flex-col lg:flex-row min-h-[520px]">
+          <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-emerald-600 to-teal-700 flex-col items-center justify-center p-10 text-white">
             <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
-              <Building2 className="w-10 h-10 text-white" />
+              <Calculator className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold mb-1">TurnosPro</h1>
-            <p className="text-blue-100 text-sm text-center mb-8 max-w-xs">
-              Sistema de Control de Turnos y Nómina empresarial
+            <h1 className="text-3xl font-bold mb-1">Portal Liquidador</h1>
+            <p className="text-emerald-100 text-sm text-center mb-8 max-w-xs">
+              Acceso exclusivo para liquidadores del sistema
             </p>
-            <div className="grid grid-cols-3 gap-4 text-center w-full max-w-xs">
+            <div className="grid grid-cols-2 gap-4 text-center w-full max-w-xs">
               {[
-                { icon: Clock,      label: "Horarios" },
-                { icon: TrendingUp, label: "Nómina" },
-                { icon: Sparkles,   label: "Automático" },
+                { icon: Clock,        label: "Turnos" },
+                { icon: ClipboardList, label: "Liquidación" },
+                { icon: Users,        label: "Empleados" },
+                { icon: Calculator,   label: "Nómina" },
               ].map(({ icon: Icon, label }) => (
                 <div key={label} className="bg-white/10 rounded-xl p-3">
                   <Icon className="w-5 h-5 mx-auto mb-1.5" />
@@ -97,24 +85,21 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Right panel — form */}
           <div className="flex-1 flex flex-col justify-center p-6 sm:p-10">
-            {/* Mobile logo */}
             <div className="flex items-center gap-3 mb-6 lg:hidden">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                <Calculator className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">TurnosPro</h1>
-                <p className="text-xs text-gray-500">Sistema de Turnos y Nómina</p>
+                <h1 className="text-lg font-bold text-gray-900">Portal Liquidador</h1>
+                <p className="text-xs text-gray-500">Acceso para liquidadores</p>
               </div>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">Iniciar Sesión</h2>
-            <p className="text-gray-500 text-sm mb-7">Accede al sistema de gestión de turnos</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">Acceso Liquidador</h2>
+            <p className="text-gray-500 text-sm mb-7">Ingresa tus credenciales de liquidador</p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email */}
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" />
@@ -123,16 +108,15 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="correo@empresa.com"
+                  placeholder="liquidador@empresa.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"
+                  className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 text-base"
                 />
               </div>
 
-              {/* Password */}
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5" />
@@ -147,13 +131,12 @@ export default function LoginPage() {
                     onChange={e => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-11 text-base"
+                    className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 pr-11 text-base"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -163,58 +146,50 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Iniciando sesión...
+                    Verificando...
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    Iniciar Sesión
+                    Ingresar como Liquidador
                     <ArrowRight className="w-4 h-4" />
                   </div>
                 )}
               </Button>
             </form>
 
-            {/* Demo credentials */}
-            <div className="mt-5 p-3.5 bg-blue-50 rounded-xl border border-blue-100">
-              <p className="text-center text-blue-800 text-xs font-semibold uppercase tracking-wide mb-1.5">
+            <div className="mt-5 p-3.5 bg-emerald-50 rounded-xl border border-emerald-100">
+              <p className="text-center text-emerald-800 text-xs font-semibold uppercase tracking-wide mb-1.5">
                 Credenciales de Demo
               </p>
-              <div className="space-y-1 text-xs text-center">
-                <p className="text-gray-600">
-                  <span className="text-blue-600 font-medium">Admin:</span> admin@demo.com / admin123
-                </p>
-                <p className="text-gray-600">
-                  <span className="text-emerald-600 font-medium">Liquidador:</span> liquidador@demo.com / liquidador123
-                </p>
-                <p className="text-gray-600">
-                  <span className="text-purple-600 font-medium">Visualizador:</span> visor@demo.com / visor123
-                </p>
-              </div>
+              <p className="text-center text-xs text-gray-600">
+                <span className="text-emerald-600 font-medium">Email:</span> liquidador@demo.com
+                {" · "}
+                <span className="text-emerald-600 font-medium">Contraseña:</span> liquidador123
+              </p>
             </div>
 
-            <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-1.5 text-xs text-gray-500">
-              <Link href="/login-liquidador" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                Acceso Liquidador →
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs text-gray-500">
+              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                Acceso Administrador
               </Link>
               <span className="hidden sm:inline">·</span>
               <Link href="/login-visualizador" className="text-purple-600 hover:text-purple-700 font-medium">
-                Acceso Visualizador →
+                Acceso Visualizador
               </Link>
               <span className="hidden sm:inline">·</span>
               <Link href="/login-auxiliar" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                Portal Auxiliar →
+                Portal Auxiliar
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Back link */}
       <Link
         href="/"
         className="absolute top-4 left-4 flex items-center gap-1 text-white/80 hover:text-white text-xs font-medium transition-colors"

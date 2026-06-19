@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -213,6 +214,9 @@ const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
 
 function ProgramacionAuxiliarInner() {
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role
+  const isLiquidador = userRole === "LIQUIDADOR"
   const today = new Date()
   const defaultStart = localDateKey(new Date(today.getFullYear(), today.getMonth(), 1, 12))
   const defaultEnd = localDateKey(new Date(today.getFullYear(), today.getMonth() + 1, 0, 12))
@@ -267,8 +271,9 @@ function ProgramacionAuxiliarInner() {
 
   async function fetchInitialData() {
     try {
+      const employeesUrl = isLiquidador ? "/api/employees" : "/api/employees?soloMios=true"
       const [er, cr, lr] = await Promise.all([
-        fetch("/api/employees?soloMios=true"),
+        fetch(employeesUrl),
         fetch("/api/concepts"),
         fetch("/api/settings/legal"),
       ])

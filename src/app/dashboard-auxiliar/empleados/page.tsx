@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -94,6 +95,9 @@ function EmpleadoCard({ empleado, onDelete }: { empleado: Empleado; onDelete: (i
 }
 
 export default function AuxiliarEmpleadosPage() {
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role
+  const isLiquidador = userRole === "LIQUIDADOR"
   const [empleados, setEmpleados] = useState<Empleado[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState("")
@@ -107,7 +111,8 @@ export default function AuxiliarEmpleadosPage() {
   const fetchEmpleados = async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/employees?soloMios=true")
+      const employeesUrl = isLiquidador ? "/api/employees" : "/api/employees?soloMios=true"
+      const res = await fetch(employeesUrl)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setEmpleados(Array.isArray(data) ? data : data.empleados ?? [])

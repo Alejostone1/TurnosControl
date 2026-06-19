@@ -102,7 +102,7 @@ const stats = [
   { label: "Normas aplicadas", value: "12+", sub: "CST y decretos vigentes" },
   { label: "Tipos de recargo", value: "8", sub: "Diurnos, nocturnos, festivos" },
   { label: "Módulos integrados", value: "6", sub: "Turnos, nómina, reportes" },
-  { label: "Roles de acceso", value: "2", sub: "Administrador y Auxiliar" },
+  { label: "Roles de acceso", value: "3", sub: "Admin, Liquidador y Visualizador" },
 ]
 
 export default function LandingPage() {
@@ -124,18 +124,18 @@ export default function LandingPage() {
               <span className="hidden sm:inline text-xs text-gray-500 ml-2">Sistema de Gestión</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="px-4 py-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
-            >
-              Administrador
+          <div className="flex items-center gap-1.5">
+            <Link href="/login" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50">
+              Admin
             </Link>
-            <Link
-              href="/login-auxiliar"
-              className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
-            >
-              Portal Auxiliar
+            <Link href="/login-liquidador" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50">
+              Liquidador
+            </Link>
+            <Link href="/login-visualizador" className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors rounded-lg hover:bg-purple-50">
+              Visor
+            </Link>
+            <Link href="/login-auxiliar" className="px-3 py-1.5 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+              Auxiliar
             </Link>
           </div>
         </div>
@@ -186,7 +186,7 @@ export default function LandingPage() {
                   className="group flex items-center justify-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                 >
                   <Building2 className="w-5 h-5" />
-                  Acceso Administrador
+                  Iniciar Sesión
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link
@@ -331,17 +331,17 @@ export default function LandingPage() {
 
       {/* ── Accesos ───────────────────────────────────────────── */}
       <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               Elige tu tipo de acceso
             </h2>
             <p className="text-gray-600 text-lg">
-              Dos roles, dos portales. Cada uno con las herramientas exactas que necesita.
+              Tres roles, tres portales. Cada uno con las herramientas exactas que necesita.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Admin */}
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-blue-100 hover:shadow-2xl transition-shadow">
               <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-8 text-white">
@@ -350,8 +350,8 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-2xl font-bold mb-2">Administrador</h3>
                 <p className="text-blue-100 text-sm leading-relaxed">
-                  Gestión completa del sistema: empleados, auxiliares, períodos de nómina,
-                  configuración de conceptos y auditoría general.
+                  Gestión completa del sistema: empleados, períodos de nómina,
+                  configuración y auditoría general.
                 </p>
               </div>
               <div className="p-6 space-y-3">
@@ -377,25 +377,25 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Auxiliar */}
+            {/* Liquidador */}
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-emerald-100 hover:shadow-2xl transition-shadow">
               <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 p-8 text-white">
                 <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-                  <UserCog className="w-9 h-9 text-white" />
+                  <Calculator className="w-9 h-9 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold mb-2">Auxiliar</h3>
+                <h3 className="text-2xl font-bold mb-2">Liquidador</h3>
                 <p className="text-emerald-100 text-sm leading-relaxed">
-                  Portal operativo para auxiliares: registro de empleados, programación de
-                  turnos y consulta de períodos de nómina.
+                  Panel de liquidación: consulta turnos, liquida, registra novedades,
+                  horas extras y recargos.
                 </p>
               </div>
               <div className="p-6 space-y-3">
                 {[
-                  "Registro y edición de empleados",
-                  "Programación de turnos mensual",
-                  "Consulta de períodos de nómina",
-                  "Vista de turnos por empleado",
-                  "Acceso restringido a su área de gestión",
+                  "Consulta de programación de turnos",
+                  "Liquidación de turnos",
+                  "Registro de novedades y horas extras",
+                  "Consulta de empleados y centros de costo",
+                  "Reportes de liquidación",
                 ].map(item => (
                   <div key={item} className="flex items-center gap-2 text-sm text-gray-700">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -403,10 +403,45 @@ export default function LandingPage() {
                   </div>
                 ))}
                 <Link
-                  href="/login-auxiliar"
+                  href="/login"
                   className="mt-4 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors w-full"
                 >
-                  Ingresar como Auxiliar
+                  Ingresar como Liquidador
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Visualizador */}
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-purple-100 hover:shadow-2xl transition-shadow">
+              <div className="bg-gradient-to-br from-purple-600 to-purple-700 p-8 text-white">
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+                  <CheckCircle2 className="w-9 h-9 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Visualizador</h3>
+                <p className="text-purple-100 text-sm leading-relaxed">
+                  Panel de revisión: supervisa, aprueba o rechaza programaciones
+                  y liquidaciones realizadas.
+                </p>
+              </div>
+              <div className="p-6 space-y-3">
+                {[
+                  "Revisión de programaciones de turnos",
+                  "Revisión de liquidaciones",
+                  "Aprobación y rechazo con observaciones",
+                  "Consulta de empleados y centros de costo",
+                  "Reportes de aprobación",
+                ].map(item => (
+                  <div key={item} className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0" />
+                    {item}
+                  </div>
+                ))}
+                <Link
+                  href="/login"
+                  className="mt-4 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors w-full"
+                >
+                  Ingresar como Visualizador
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -434,16 +469,16 @@ export default function LandingPage() {
               <p className="mt-1">Decreto 1072/2015 · Ley 2101/2021 · Ley 2466/2025 · Ministerio del Trabajo</p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <Link
                 href="/login"
-                className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
               >
-                Admin
+                Acceso Sistema
               </Link>
               <Link
                 href="/login-auxiliar"
-                className="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors"
               >
                 Auxiliar
               </Link>

@@ -21,14 +21,14 @@ export default function DashboardAuxiliarPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch("/api/employees?page=1&limit=1")
+    fetch("/api/employees?soloMios=true")
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data) {
+        if (Array.isArray(data)) {
           setStats({
-            totalEmpleados:   data.total ?? 0,
-            empleadosActivos: data.activos ?? 0,
-            empleadosCreados: data.total ?? 0,
+            totalEmpleados:   data.length,
+            empleadosActivos: data.filter(e => e.estaActivo).length,
+            empleadosCreados: data.length,
           })
         }
       })
