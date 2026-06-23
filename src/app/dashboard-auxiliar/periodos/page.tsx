@@ -503,7 +503,7 @@ function PeriodEmployeePanel({
                 </div>
               </div>
               <div className="flex flex-col gap-1 shrink-0">
-                <Link href={`${BASE_DASH}/schedules?empleadoId=${emp.id}&startDate=${startParam}&endDate=${endParam}`}>
+                <Link href={`${BASE_DASH}/programacion?empleadoId=${emp.id}&startDate=${startParam}&endDate=${endParam}`}>
                   <Button size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-0.5">
                     <Calendar className="h-3 w-3" />
                     Programar
